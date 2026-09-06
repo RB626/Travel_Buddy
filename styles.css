@@ -5352,3 +5352,349 @@ body.details-modal-open {
     }
 
 }
+
+/* =========================================================
+   AUTH MODAL - FULLY RESPONSIVE MOBILE
+========================================================= */
+
+@media (max-width: 700px) {
+
+    /* =========================================
+       MODAL CONTAINER
+    ========================================= */
+
+    .auth-modal {
+        position: fixed !important;
+
+        inset: 0 !important;
+
+        width: 100% !important;
+        height: 100dvh !important;
+
+        padding: 12px !important;
+
+        display: flex !important;
+
+        align-items: center !important;
+        justify-content: center !important;
+
+        overflow: hidden !important;
+
+        z-index: 2000 !important;
+    }
+
+
+    /* KEEP HIDDEN ATTRIBUTE WORKING */
+
+    .auth-modal[hidden] {
+        display: none !important;
+    }
+
+
+    /* =========================================
+       BACKDROP
+    ========================================= */
+
+    .auth-backdrop {
+        position: absolute !important;
+
+        inset: 0 !important;
+
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+
+    /* =========================================
+       MAIN AUTH PANEL
+    ========================================= */
+
+    .auth-panel {
+        position: relative !important;
+
+        width: 100% !important;
+        max-width: 520px !important;
+
+        height: auto !important;
+
+        max-height:
+            calc(100dvh - 24px) !important;
+
+        min-height: 0 !important;
+
+        margin: 0 auto !important;
+
+        padding:
+            28px 24px 24px !important;
+
+        border-radius:
+            26px !important;
+
+        overflow-y:
+            auto !important;
+
+        overflow-x:
+            hidden !important;
+
+        overscroll-behavior:
+            contain;
+
+        -webkit-overflow-scrolling:
+            touch;
+
+        box-sizing:
+            border-box !important;
+    }
+
+
+    /* =========================================
+       AUTH HEADER
+    ========================================= */
+
+    .auth-brand {
+        gap: 14px !important;
+
+        margin-bottom:
+            22px !important;
+    }
+
+
+    .auth-brand-icon {
+        width: 54px !important;
+        height: 54px !important;
+
+        flex-shrink: 0;
+    }
+
+
+    .auth-brand h2 {
+        font-size:
+            clamp(20px,
+                6vw,
+                28px) !important;
+
+        line-height: 1.15 !important;
+    }
+
+
+    .auth-brand p {
+        font-size:
+            13px !important;
+
+        line-height:
+            1.45 !important;
+    }
+
+
+    /* =========================================
+       CLOSE BUTTON
+    ========================================= */
+
+    .auth-close-btn {
+        top: 18px !important;
+        right: 18px !important;
+
+        width: 44px !important;
+        height: 44px !important;
+    }
+
+
+    /* =========================================
+       SIGN IN / SIGN UP TABS
+    ========================================= */
+
+    .auth-tabs {
+        width: 100% !important;
+
+        margin-bottom:
+            22px !important;
+    }
+
+
+    .auth-tab {
+        min-width: 0 !important;
+
+        padding:
+            12px 8px !important;
+
+        font-size:
+            14px !important;
+    }
+
+
+    /* =========================================
+       GOOGLE BUTTON
+    ========================================= */
+
+    .google-auth-btn {
+        width: 100% !important;
+
+        min-height:
+            54px !important;
+
+        font-size:
+            14px !important;
+    }
+
+
+    /* =========================================
+       FORMS
+    ========================================= */
+
+    .auth-form {
+        width: 100% !important;
+    }
+
+
+    .auth-field {
+        width: 100% !important;
+    }
+
+
+    .auth-input-wrap {
+        width: 100% !important;
+
+        min-height:
+            58px !important;
+    }
+
+
+    .auth-input-wrap input {
+        width: 100% !important;
+
+        min-width: 0 !important;
+
+        font-size:
+            15px !important;
+
+        box-sizing:
+            border-box !important;
+    }
+
+
+    /* =========================================
+       FIRST / LAST NAME
+    ========================================= */
+
+    .auth-name-row {
+        width: 100% !important;
+
+        display: grid !important;
+
+        grid-template-columns:
+            repeat(2,
+                minmax(0, 1fr)) !important;
+
+        gap: 12px !important;
+    }
+
+
+    /* =========================================
+       PRIMARY BUTTON
+    ========================================= */
+
+    .auth-primary-btn {
+        width: 100% !important;
+
+        min-height:
+            56px !important;
+
+        margin-top:
+            4px !important;
+    }
+
+
+    /* =========================================
+       BOTTOM ACCOUNT TEXT
+    ========================================= */
+
+    .auth-switch-text {
+        margin-bottom:
+            4px !important;
+
+        padding-bottom:
+            4px !important;
+
+        font-size:
+            13px !important;
+
+        text-align:
+            center !important;
+    }
+
+}
+
+
+/* =========================================================
+   SMALL PHONES
+========================================================= */
+
+@media (max-width: 420px) {
+
+    .auth-modal {
+        padding:
+            8px !important;
+    }
+
+
+    .auth-panel {
+        width: 100% !important;
+
+        max-height:
+            calc(100dvh - 16px) !important;
+
+        padding:
+            24px 18px 20px !important;
+
+        border-radius:
+            22px !important;
+    }
+
+
+    .auth-close-btn {
+        top: 14px !important;
+        right: 14px !important;
+
+        width: 42px !important;
+        height: 42px !important;
+    }
+
+
+    .auth-brand-icon {
+        width: 50px !important;
+        height: 50px !important;
+    }
+
+
+    .auth-brand {
+        padding-right:
+            42px !important;
+    }
+
+
+    .auth-name-row {
+        grid-template-columns:
+            1fr !important;
+
+        gap: 14px !important;
+    }
+
+
+    .auth-input-wrap {
+        min-height:
+            54px !important;
+    }
+
+
+    .google-auth-btn {
+        min-height:
+            52px !important;
+    }
+
+
+    .auth-primary-btn {
+        min-height:
+            54px !important;
+    }
+
+}
