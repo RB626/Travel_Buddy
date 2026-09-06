@@ -10,7 +10,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800;900&display=swap"
     rel="stylesheet">
   <script src="https://unpkg.com/lucide@0.468.0"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -1176,10 +1175,36 @@
     </nav>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- =========================================================
+     GOOGLE MAPS JAVASCRIPT API
+========================================================= -->
+
+  <script>
+
+    /*
+       Promise used by app.js so it can safely wait
+       until Google Maps has completely loaded.
+    */
+
+    window.googleMapsReady =
+      new Promise((resolve) => {
+
+        window.initTravelBuddyGoogleMaps =
+          resolve;
+
+      });
+
+  </script>
+
+
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGVzALyE9e1j1TxSU6ai0PrtKwmk_Xqm0&loading=async&callback=initTravelBuddyGoogleMaps&v=weekly">
+    </script>
+
 
   <script type="module" src="app.js">
   </script>
+
 
 </body>
 

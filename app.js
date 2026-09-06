@@ -14,7 +14,6 @@ import {
 
 
 const lucide = window.lucide;
-const L = window.L;
 
 lucide.createIcons();
 
@@ -97,17 +96,25 @@ const MAP_COORDINATES = {
    SAMAR MAP BOUNDS
 ========================================= */
 
-const SAMAR_BOUNDS =
-    L.latLngBounds(
-        [
-            10.75,
-            124.20
-        ],
-        [
-            12.75,
-            125.75
-        ]
-    );
+/* =========================================
+   SAMAR MAP BOUNDS
+========================================= */
+
+const SAMAR_BOUNDS = {
+
+    north:
+        12.75,
+
+    south:
+        10.75,
+
+    west:
+        124.20,
+
+    east:
+        125.75
+
+};
 
 const detailsModal =
     document.getElementById("detailsModal");
@@ -214,8 +221,8 @@ const seeAllButton =
 let activeDetailsPlaceId = null;
 let travelMap = null;
 let travelMapMarkers = [];
-let streetLayer = null;
-let satelliteLayer = null;
+let travelMapInfoWindow =
+    null;
 
 /* =========================================
    ACTIVE FILTER
@@ -2096,28 +2103,40 @@ document
 
     });
 
+/* =========================================================
+   GOOGLE MAPS MARKER ICON
+========================================================= */
+
 function createTravelMapIcon() {
 
-    return L.divIcon({
+    return {
 
-        className:
-            "travel-map-icon",
+        path:
+            google.maps.SymbolPath.CIRCLE,
 
-        html:
-            '<div class="travel-map-marker"></div>',
+        scale:
+            11,
 
-        iconSize:
-            [38, 38],
+        fillColor:
+            "#00aeb3",
 
-        iconAnchor:
-            [19, 38],
+        fillOpacity:
+            1,
 
-        popupAnchor:
-            [0, -38]
+        strokeColor:
+            "#ffffff",
 
-    });
+        strokeWeight:
+            3
+
+    };
 
 }
+
+
+/* =========================================================
+   GOOGLE MAPS POPUP
+========================================================= */
 
 function createMapPopup(
     card
@@ -2126,21 +2145,34 @@ function createMapPopup(
     const placeId =
         card.dataset.id;
 
+
     const name =
-        card.dataset.name || "";
+        card.dataset.name
+        ||
+        "";
+
 
     const category =
-        card.dataset.category || "";
+        card.dataset.category
+        ||
+        "";
+
 
     const image =
         card.querySelector(
             ".card-photo img"
-        )?.src || "";
+        )?.src
+        ||
+        "";
+
 
     const location =
         card.querySelector(
             ".place"
-        )?.textContent.trim() || "";
+        )?.textContent
+            .trim()
+        ||
+        "";
 
 
     return `
@@ -2187,34 +2219,38 @@ function createMapPopup(
 
 }
 
-function initializeTravelMap() {
+
+/* =========================================================
+   INITIALIZE GOOGLE MAP
+========================================================= */
+
+async function initializeTravelMap() {
+
+    /* =========================================
+       WAIT FOR GOOGLE MAPS API
+    ========================================= */
 
     if (
-        typeof L === "undefined"
+        window.googleMapsReady
+    ) {
+
+        await window.googleMapsReady;
+
+    }
+
+
+    /* =========================================
+       CHECK GOOGLE MAPS
+    ========================================= */
+
+    if (
+        !window.google
+        ||
+        !window.google.maps
     ) {
 
         console.error(
-            "Leaflet failed to load."
-        );
-
-        return;
-
-    }
-
-
-    /*
-      MAP ALREADY EXISTS
-    */
-
-    if (travelMap) {
-
-        setTimeout(
-            () => {
-
-                travelMap.invalidateSize();
-
-            },
-            100
+            "Google Maps JavaScript API failed to load."
         );
 
         return;
@@ -2223,81 +2259,188 @@ function initializeTravelMap() {
 
 
     /* =========================================
-       CREATE MAP
+       MAP ALREADY EXISTS
+    ========================================= */
+
+    if (
+        travelMap
+    ) {
+
+        /*
+           Google Maps automatically handles most
+           resizing, but recentering ensures the
+           hidden Map page renders correctly.
+        */
+
+        const currentCenter =
+            travelMap.getCenter();
+
+
+        if (
+            currentCenter
+        ) {
+
+            travelMap.setCenter(
+                currentCenter
+            );
+
+        }
+
+
+        return;
+
+    }
+
+
+    const mapElement =
+        document.getElementById(
+            "travelMap"
+        );
+
+
+    if (
+        !mapElement
+    ) {
+
+        return;
+
+    }
+
+
+    /* =========================================
+       CREATE GOOGLE MAP
     ========================================= */
 
     travelMap =
-        L.map(
-            "travelMap",
+        new google.maps.Map(
+            mapElement,
             {
-                zoomControl: false,
 
-                minZoom: 8,
+                center: {
 
-                maxZoom: 19,
+                    lat:
+                        11.7753,
 
-                maxBounds:
-                    SAMAR_BOUNDS,
+                    lng:
+                        124.8861
 
-                maxBoundsViscosity:
-                    1.0
+                },
+
+
+                zoom:
+                    9,
+
+
+                minZoom:
+                    8,
+
+
+                /*
+                   Allows users to zoom deeply
+                   into roads and streets.
+                */
+
+                maxZoom:
+                    21,
+
+
+                mapTypeId:
+                    google.maps.MapTypeId
+                        .ROADMAP,
+
+
+                /* =================================
+                   GOOGLE STREET VIEW PEGMAN
+                ================================= */
+
+                streetViewControl:
+                    true,
+
+
+                streetViewControlOptions: {
+
+                    position:
+                        google.maps
+                            .ControlPosition
+                            .RIGHT_BOTTOM
+
+                },
+
+
+                /* =================================
+                   GOOGLE MAP CONTROLS
+                ================================= */
+
+                zoomControl:
+                    true,
+
+
+                fullscreenControl:
+                    true,
+
+
+                /*
+                   We already have our custom
+                   Street / Satellite buttons.
+                */
+
+                mapTypeControl:
+                    false,
+
+
+                scaleControl:
+                    true,
+
+
+                gestureHandling:
+                    "greedy",
+
+
+                /* =================================
+                   KEEP MAP AROUND SAMAR
+                ================================= */
+
+                restriction: {
+
+                    latLngBounds:
+                        SAMAR_BOUNDS,
+
+                    strictBounds:
+                        false
+
+                }
+
             }
         );
 
 
     /* =========================================
-       STREET MAP
+       SHARED INFO WINDOW
     ========================================= */
 
-    streetLayer =
-        L.tileLayer(
-            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            {
-                maxZoom: 19,
+    travelMapInfoWindow =
+        new google.maps.InfoWindow({
 
-                attribution:
-                    "&copy; OpenStreetMap contributors"
-            }
-        );
+            maxWidth:
+                280
 
-
-    streetLayer.addTo(
-        travelMap
-    );
+        });
 
 
     /* =========================================
-       SATELLITE MAP
+       CLEAR OLD MARKERS
     ========================================= */
 
-    satelliteLayer =
-        L.tileLayer(
-            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-            {
-                maxZoom: 19,
+    travelMapMarkers =
+        [];
 
-                attribution:
-                    "Tiles &copy; Esri"
-            }
-        );
+
+    const markerBounds =
+        new google.maps.LatLngBounds();
 
 
     /* =========================================
-       ZOOM BUTTONS
-    ========================================= */
-
-    L.control.zoom({
-        position: "topright"
-    }).addTo(
-        travelMap
-    );
-
-
-    const markerBounds = [];
-
-
-    /* =========================================
-       BUILD DESTINATION MARKERS
+       CREATE DESTINATION MARKERS
     ========================================= */
 
     destinationCards.forEach(
@@ -2313,42 +2456,78 @@ function initializeTravelMap() {
                 ];
 
 
-            if (!coordinates) {
+            if (
+                !coordinates
+            ) {
 
                 return;
 
             }
 
 
+            const position = {
+
+                lat:
+                    coordinates.lat,
+
+                lng:
+                    coordinates.lng
+
+            };
+
+
+            /* =================================
+               GOOGLE MAP MARKER
+            ================================= */
+
             const marker =
-                L.marker(
-                    [
-                        coordinates.lat,
-                        coordinates.lng
-                    ],
-                    {
-                        icon:
-                            createTravelMapIcon()
-                    }
-                );
+                new google.maps.Marker({
+
+                    position:
+                        position,
+
+                    map:
+                        travelMap,
+
+                    title:
+                        card.dataset.name
+                        ||
+                        "",
+
+                    icon:
+                        createTravelMapIcon()
+
+                });
 
 
-            marker.bindPopup(
-                createMapPopup(
-                    card
-                ),
-                {
-                    closeButton:
-                        false,
+            /* =================================
+               OPEN DESTINATION POPUP
+            ================================= */
 
-                    maxWidth:
-                        260
+            marker.addListener(
+                "click",
+                () => {
+
+                    travelMapInfoWindow
+                        .setContent(
+                            createMapPopup(
+                                card
+                            )
+                        );
+
+
+                    travelMapInfoWindow
+                        .open({
+
+                            map:
+                                travelMap,
+
+                            anchor:
+                                marker
+
+                        });
+
                 }
-            );
-
-
-            marker.addTo(
-                travelMap
             );
 
 
@@ -2357,11 +2536,8 @@ function initializeTravelMap() {
             );
 
 
-            markerBounds.push(
-                [
-                    coordinates.lat,
-                    coordinates.lng
-                ]
+            markerBounds.extend(
+                position
             );
 
         }
@@ -2369,44 +2545,48 @@ function initializeTravelMap() {
 
 
     /* =========================================
-       FOCUS SAMAR
+       SHOW ALL DESTINATIONS
     ========================================= */
 
-    travelMap.fitBounds(
-        SAMAR_BOUNDS,
-        {
-            padding:
-                [20, 20]
-        }
-    );
-
-
-    /*
-      OPTIONAL:
-      IF YOU WANT THE DESTINATIONS
-      TO BE SLIGHTLY MORE CENTERED
-    */
-
     if (
-        markerBounds.length
+        !markerBounds.isEmpty()
     ) {
 
-        const destinationBounds =
-            L.latLngBounds(
-                markerBounds
-            );
-
-
         travelMap.fitBounds(
-            destinationBounds,
-            {
-                padding:
-                    [45, 45],
-
-                maxZoom:
-                    10
-            }
+            markerBounds,
+            45
         );
+
+
+        /*
+           Prevent fitBounds from zooming
+           too close on initialization.
+        */
+
+        google.maps.event
+            .addListenerOnce(
+                travelMap,
+                "idle",
+                () => {
+
+                    const currentZoom =
+                        travelMap.getZoom();
+
+
+                    if (
+                        currentZoom
+                        &&
+                        currentZoom > 10
+                    ) {
+
+                        travelMap.setZoom(
+                            10
+                        );
+
+                    }
+
+                }
+            );
 
     }
 
@@ -2493,14 +2673,16 @@ mapNavButton?.addEventListener(
     }
 );
 
+/* =========================================================
+   GOOGLE STREET / ROAD MAP
+========================================================= */
+
 streetMapButton?.addEventListener(
     "click",
     () => {
 
         if (
             !travelMap
-            ||
-            !streetLayer
         ) {
 
             return;
@@ -2508,32 +2690,10 @@ streetMapButton?.addEventListener(
         }
 
 
-        if (
-            satelliteLayer
-            &&
-            travelMap.hasLayer(
-                satelliteLayer
-            )
-        ) {
-
-            travelMap.removeLayer(
-                satelliteLayer
-            );
-
-        }
-
-
-        if (
-            !travelMap.hasLayer(
-                streetLayer
-            )
-        ) {
-
-            streetLayer.addTo(
-                travelMap
-            );
-
-        }
+        travelMap.setMapTypeId(
+            google.maps.MapTypeId
+                .ROADMAP
+        );
 
 
         streetMapButton
@@ -2550,14 +2710,17 @@ streetMapButton?.addEventListener(
     }
 );
 
+
+/* =========================================================
+   GOOGLE SATELLITE MAP
+========================================================= */
+
 satelliteMapButton?.addEventListener(
     "click",
     () => {
 
         if (
             !travelMap
-            ||
-            !satelliteLayer
         ) {
 
             return;
@@ -2565,32 +2728,10 @@ satelliteMapButton?.addEventListener(
         }
 
 
-        if (
-            streetLayer
-            &&
-            travelMap.hasLayer(
-                streetLayer
-            )
-        ) {
-
-            travelMap.removeLayer(
-                streetLayer
-            );
-
-        }
-
-
-        if (
-            !travelMap.hasLayer(
-                satelliteLayer
-            )
-        ) {
-
-            satelliteLayer.addTo(
-                travelMap
-            );
-
-        }
+        travelMap.setMapTypeId(
+            google.maps.MapTypeId
+                .SATELLITE
+        );
 
 
         satelliteMapButton
@@ -3801,11 +3942,17 @@ function openDestinationDetails(
 
 }
 
+/* =========================================================
+   SHOW ALL GOOGLE MAP MARKERS
+========================================================= */
+
 mapShowAllButton?.addEventListener(
     "click",
     () => {
 
-        if (!travelMap) {
+        if (
+            !travelMap
+        ) {
 
             return;
 
@@ -3813,17 +3960,40 @@ mapShowAllButton?.addEventListener(
 
 
         const bounds =
-            travelMapMarkers.map(
-                marker =>
-                    marker.getLatLng()
+            new google.maps.LatLngBounds();
+
+
+        travelMapMarkers
+            .forEach(
+                marker => {
+
+                    const position =
+                        marker.getPosition();
+
+
+                    if (
+                        position
+                    ) {
+
+                        bounds.extend(
+                            position
+                        );
+
+                    }
+
+                }
             );
 
 
-        if (!bounds.length) {
+        if (
+            bounds.isEmpty()
+        ) {
 
             travelMap.fitBounds(
-                SAMAR_BOUNDS
+                SAMAR_BOUNDS,
+                20
             );
+
 
             return;
 
@@ -3832,14 +4002,34 @@ mapShowAllButton?.addEventListener(
 
         travelMap.fitBounds(
             bounds,
-            {
-                padding:
-                    [45, 45],
-
-                maxZoom:
-                    10
-            }
+            45
         );
+
+
+        google.maps.event
+            .addListenerOnce(
+                travelMap,
+                "idle",
+                () => {
+
+                    const zoom =
+                        travelMap.getZoom();
+
+
+                    if (
+                        zoom
+                        &&
+                        zoom > 10
+                    ) {
+
+                        travelMap.setZoom(
+                            10
+                        );
+
+                    }
+
+                }
+            );
 
     }
 );
