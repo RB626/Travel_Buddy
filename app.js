@@ -4278,20 +4278,15 @@ window.addEventListener(
 );
 
 /* =========================================================
-   STREET VIEW BUTTON
-   USE GOOGLE MAP'S BUILT-IN STREET VIEW
+   MOBILE-FRIENDLY STREET VIEW
 ========================================================= */
 
 streetViewButton?.addEventListener(
     "click",
-    () => {
+    async () => {
 
         if (
             !travelMap
-            ||
-            !window.google
-            ||
-            !window.google.maps
         ) {
 
             return;
@@ -4305,25 +4300,6 @@ streetViewButton?.addEventListener(
 
         if (
             !center
-        ) {
-
-            return;
-
-        }
-
-
-        /* =========================================
-           DEFAULT STREET VIEW PANORAMA
-
-           SAME PANORAMA USED BY PEGMAN
-        ========================================= */
-
-        const panorama =
-            travelMap.getStreetView();
-
-
-        if (
-            !panorama
         ) {
 
             return;
@@ -4352,121 +4328,173 @@ streetViewButton?.addEventListener(
         ) {
 
             label.textContent =
-                "Opening...";
+                "Finding...";
 
         }
 
 
-        /* =========================================
-           WAIT FOR GOOGLE STREET VIEW RESULT
-        ========================================= */
+        try {
 
-        const statusListener =
-            panorama.addListener(
-                "status_changed",
-                () => {
-
-                    const status =
-                        panorama.getStatus();
+            const streetViewService =
+                new google.maps
+                    .StreetViewService();
 
 
-                    /* =================================
-                       STREET VIEW FOUND
-                    ================================= */
+            /*
+               Search progressively farther away.
+
+               This is much better for rural Samar
+               where Street View roads may not be
+               immediately beside the map center.
+            */
+
+            const searchRadii = [
+                100,
+                300,
+                750,
+                1500,
+                3000
+            ];
+
+
+            let streetViewResult =
+                null;
+
+
+            for (
+                const radius
+                of
+                searchRadii
+            ) {
+
+                try {
+
+                    streetViewResult =
+                        await streetViewService
+                            .getPanorama({
+
+                                location:
+                                    center,
+
+                                radius:
+                                    radius,
+
+                                preference:
+                                    google.maps
+                                        .StreetViewPreference
+                                        .NEAREST,
+
+                                source:
+                                    google.maps
+                                        .StreetViewSource
+                                        .DEFAULT
+
+                            });
+
 
                     if (
-                        status ===
-                        google.maps.StreetViewStatus.OK
+                        streetViewResult
+                            ?.data
+                            ?.location
+                            ?.pano
                     ) {
 
-                        panorama.setPov({
-
-                            heading:
-                                0,
-
-                            pitch:
-                                0
-
-                        });
-
-
-                        panorama.setVisible(
-                            true
-                        );
-
-
-                        streetViewButton.disabled =
-                            false;
-
-
-                        if (
-                            label
-                        ) {
-
-                            label.textContent =
-                                originalText;
-
-                        }
-
-
-                        statusListener.remove();
+                        break;
 
                     }
 
 
-                    /* =================================
-                       NO STREET VIEW
-                    ================================= */
+                } catch (
+                error
+                ) {
 
-                    else if (
-                        status ===
-                        google.maps
-                            .StreetViewStatus
-                            .ZERO_RESULTS
-                    ) {
+                    /*
+                       ZERO_RESULTS means simply:
+                       try a wider radius.
+                    */
 
-                        panorama.setVisible(
-                            false
-                        );
-
-
-                        streetViewButton.disabled =
-                            false;
-
-
-                        if (
-                            label
-                        ) {
-
-                            label.textContent =
-                                originalText;
-
-                        }
-
-
-                        statusListener.remove();
-
-
-                        alert(
-                            "No Google Street View is available near this location. Move the map closer to a road and try again."
-                        );
-
-                    }
+                    console.log(
+                        `No Street View within ${radius}m`
+                    );
 
                 }
+
+            }
+
+
+            const pano =
+                streetViewResult
+                    ?.data
+                    ?.location
+                    ?.pano;
+
+
+            if (
+                !pano
+            ) {
+
+                throw new Error(
+                    "No nearby Street View imagery."
+                );
+
+            }
+
+
+            const panorama =
+                travelMap.getStreetView();
+
+
+            panorama.setPano(
+                pano
             );
 
 
-        /* =========================================
-           OPEN STREET VIEW AT MAP CENTER
+            panorama.setPov({
 
-           THIS USES THE MAP'S DEFAULT PANORAMA
-           INSTEAD OF StreetViewService.getPanorama()
-        ========================================= */
+                heading:
+                    0,
 
-        panorama.setPosition(
-            center
-        );
+                pitch:
+                    0
+
+            });
+
+
+            panorama.setVisible(
+                true
+            );
+
+
+        } catch (
+        error
+        ) {
+
+            console.warn(
+                "Street View unavailable:",
+                error
+            );
+
+
+            alert(
+                "Google Street View is not available near this location."
+            );
+
+        } finally {
+
+            streetViewButton.disabled =
+                false;
+
+
+            if (
+                label
+            ) {
+
+                label.textContent =
+                    originalText;
+
+            }
+
+        }
 
     }
 );
