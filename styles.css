@@ -2271,6 +2271,95 @@ body.details-modal-open {
         padding-bottom: 72px;
     }
 
+    .floating-ai,
+    .page.map-mode .floating-ai {
+
+        right: 14px;
+
+        bottom:
+            calc(82px + env(safe-area-inset-bottom));
+
+        width:
+            min(220px,
+                calc(100vw - 28px));
+
+        height: 48px;
+
+        padding:
+            0 16px;
+
+        display: flex;
+
+        align-items: center;
+        justify-content: flex-start;
+
+        gap: 9px;
+
+        border-radius: 24px;
+
+        font-size: 13px;
+
+        white-space: nowrap;
+    }
+
+
+    .floating-ai svg,
+    .page.map-mode .floating-ai svg {
+
+        width: 18px;
+        height: 18px;
+
+        flex-shrink: 0;
+    }
+
+
+    .floating-ai span,
+    .page.map-mode .floating-ai span {
+
+        display: block !important;
+
+        max-width: none !important;
+
+        opacity: 1 !important;
+
+        overflow: visible;
+
+        white-space: nowrap;
+    }
+
+
+    /* Keep same appearance when tapped/hovered */
+
+    .floating-ai:hover,
+    .page.map-mode .floating-ai:hover {
+
+        width:
+            min(220px,
+                calc(100vw - 28px));
+
+        height: 48px;
+
+        padding:
+            0 16px;
+
+        gap: 9px;
+
+        border-radius: 24px;
+
+        justify-content: flex-start;
+    }
+
+
+    .floating-ai:hover span,
+    .page.map-mode .floating-ai:hover span {
+
+        display: block !important;
+
+        max-width: none !important;
+
+        opacity: 1 !important;
+    }
+
     .map-style-switch {
         top: 10px;
         left: 10px;
@@ -3150,13 +3239,6 @@ body.details-modal-open {
     }
 
 
-    .page.map-mode .floating-ai:hover span {
-        max-width: 0;
-
-        opacity: 0;
-    }
-
-
     .nav-item {
         height: 68px;
 
@@ -3205,38 +3287,6 @@ body.details-modal-open {
 }
 
 
-
-@media(max-width:380px) {
-
-    .floating-ai {
-        width: 48px;
-        height: 48px;
-
-        padding: 0;
-
-        justify-content: center;
-    }
-
-    .floating-ai span {
-        display: none;
-    }
-
-    .map-style-btn {
-        width: 34px;
-
-        padding: 0;
-
-        justify-content: center;
-    }
-
-
-    .map-style-btn span {
-        display: none;
-    }
-
-}
-
-
 @media(max-width:380px) {
 
     .map-section {
@@ -3252,6 +3302,19 @@ body.details-modal-open {
 
     .map-subtitle {
         font-size: 11px;
+    }
+
+    .map-style-btn {
+        width: 34px;
+
+        padding: 0;
+
+        justify-content: center;
+    }
+
+
+    .map-style-btn span {
+        display: none;
     }
 
 
