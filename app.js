@@ -514,7 +514,7 @@ function handleAccountAccess() {
 ========================================================= */
 
 const TRAVELBUDDY_API_URL =
-    "https://travelbuddy-ai.rbbelas54.workers.dev/chat";
+    "https://openrouterapikey.rbbelas54.workers.dev/chat";
 
 
 let travelBuddyConversation = [];
