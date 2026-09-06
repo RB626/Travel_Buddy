@@ -17,6 +17,8 @@ const lucide = window.lucide;
 
 lucide.createIcons();
 
+
+const streetViewButton = document.getElementById("streetViewButton");
 const travelBuddyAiButton = document.getElementById("travelBuddyAiButton");
 const aiChat = document.getElementById("aiChat");
 const aiChatCloseButton = document.getElementById("aiChatCloseButton");
@@ -2354,7 +2356,7 @@ async function initializeTravelMap() {
                 ================================= */
 
                 streetViewControl:
-                    true,
+                    window.innerWidth > 700,
 
 
                 streetViewControlOptions: {
@@ -4199,6 +4201,187 @@ window.addEventListener(
             },
             250
         );
+
+    }
+);
+
+/* =========================================================
+   MOBILE-FRIENDLY STREET VIEW BUTTON
+========================================================= */
+
+streetViewButton?.addEventListener(
+    "click",
+    async () => {
+
+        if (
+            !travelMap
+        ) {
+
+            return;
+
+        }
+
+
+        const center =
+            travelMap.getCenter();
+
+
+        if (
+            !center
+        ) {
+
+            return;
+
+        }
+
+
+        streetViewButton.disabled =
+            true;
+
+
+        const originalText =
+            streetViewButton
+                .querySelector(
+                    "span"
+                )
+                ?.textContent;
+
+
+        const label =
+            streetViewButton
+                .querySelector(
+                    "span"
+                );
+
+
+        if (
+            label
+        ) {
+
+            label.textContent =
+                "Finding...";
+
+        }
+
+
+        try {
+
+            const streetViewService =
+                new google.maps
+                    .StreetViewService();
+
+
+            /*
+               Search nearby roads.
+
+               Start with 100 meters.
+            */
+
+            const response =
+                await streetViewService
+                    .getPanorama({
+
+                        location:
+                            center,
+
+                        radius:
+                            100,
+
+                        preference:
+                            google.maps
+                                .StreetViewPreference
+                                .NEAREST,
+
+                        source:
+                            google.maps
+                                .StreetViewSource
+                                .OUTDOOR
+
+                    });
+
+
+            const panorama =
+                travelMap
+                    .getStreetView();
+
+
+            const panoLocation =
+                response
+                    ?.data
+                    ?.location;
+
+
+            if (
+                !panoLocation
+                ||
+                !panoLocation.pano
+            ) {
+
+                throw new Error(
+                    "No Street View found."
+                );
+
+            }
+
+
+            panorama.setPano(
+                panoLocation.pano
+            );
+
+
+            panorama.setPov({
+
+                heading:
+                    0,
+
+                pitch:
+                    0
+
+            });
+
+
+            panorama.setVisible(
+                true
+            );
+
+
+        } catch (
+        error
+        ) {
+
+            console.warn(
+                "Street View unavailable:",
+                error
+            );
+
+
+            /*
+               Use your own toast here if
+               you already have one.
+            */
+
+            alert(
+                "No Street View is available near this location. Zoom closer to a road and try again."
+            );
+
+        } finally {
+
+            streetViewButton.disabled =
+                false;
+
+
+            if (
+                label
+            ) {
+
+                label.textContent =
+                    originalText
+                    ||
+                    "Street View";
+
+            }
+
+        }
 
     }
 );

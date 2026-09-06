@@ -5698,3 +5698,161 @@ body.details-modal-open {
     }
 
 }
+
+/* =========================================================
+   MOBILE MAP CONTROLS
+========================================================= */
+
+@media (max-width:700px) {
+
+    .map-style-switch {
+        display: grid;
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+
+        width:
+            calc(100% - 24px);
+
+        left:
+            12px;
+
+        right:
+            12px;
+
+        gap:
+            6px;
+    }
+
+
+    .map-style-btn {
+        min-width: 0;
+
+        padding:
+            9px 7px;
+
+        gap:
+            5px;
+
+        font-size:
+            11px;
+
+        justify-content: center;
+    }
+
+
+    .map-style-btn svg {
+        width:
+            16px;
+
+        height:
+            16px;
+    }
+
+}
+
+/* =========================================================
+   COMPACT MOBILE MAP STYLE SWITCH
+========================================================= */
+
+@media (max-width:700px){
+
+    .map-style-switch{
+
+        position:absolute !important;
+
+        top:10px !important;
+        left:10px !important;
+        right:auto !important;
+
+        width:auto !important;
+        max-width:calc(100% - 20px) !important;
+
+        display:flex !important;
+
+        align-items:center !important;
+
+        gap:5px !important;
+
+        padding:4px !important;
+
+        border-radius:22px !important;
+
+        overflow-x:auto !important;
+        overflow-y:hidden !important;
+
+        background:rgba(255,255,255,.96) !important;
+
+        box-shadow:
+            0 3px 12px
+            rgba(20,50,65,.12) !important;
+
+        scrollbar-width:none;
+        -ms-overflow-style:none;
+
+        z-index:20 !important;
+    }
+
+
+    .map-style-switch::-webkit-scrollbar{
+        display:none;
+    }
+
+
+    .map-style-btn{
+
+        width:auto !important;
+        min-width:auto !important;
+
+        height:36px !important;
+
+        padding:
+            0 12px !important;
+
+        display:flex !important;
+
+        align-items:center !important;
+        justify-content:center !important;
+
+        gap:5px !important;
+
+        border-radius:18px !important;
+
+        font-size:11px !important;
+
+        white-space:nowrap !important;
+
+        flex:0 0 auto !important;
+    }
+
+
+    .map-style-btn svg{
+
+        width:15px !important;
+        height:15px !important;
+
+        flex-shrink:0 !important;
+    }
+
+
+    .map-style-btn.active{
+
+        padding:
+            0 14px !important;
+    }
+
+}
+
+@media (max-width:700px){
+
+    .map-style-btn span{
+        display:none;
+    }
+
+    .map-style-btn{
+        width:38px !important;
+        height:38px !important;
+        padding:0 !important;
+        border-radius:50% !important;
+    }
+
+}
