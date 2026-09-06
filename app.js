@@ -1,15 +1,8 @@
 
+import { app, auth } from "./firebase-config.js";
+import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-ai.js";
 import {
-    auth
-} from "./firebase-config.js";
-
-
-import {
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    updateProfile,
-    onAuthStateChanged,
-    signOut,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut,
     setPersistence,
     browserLocalPersistence,
     browserSessionPersistence,
@@ -26,15 +19,13 @@ const L = window.L;
 
 lucide.createIcons();
 
-
-/* =========================================
-   GET ELEMENTS
-========================================= */
-
-/* =========================================
-   AUTH ELEMENTS
-========================================= */
-
+const travelBuddyAiButton = document.getElementById("travelBuddyAiButton");
+const aiChat = document.getElementById("aiChat");
+const aiChatCloseButton = document.getElementById("aiChatCloseButton");
+const aiChatMessages = document.getElementById("aiChatMessages");
+const aiChatForm = document.getElementById("aiChatForm");
+const aiChatInput = document.getElementById("aiChatInput");
+const aiChatSendButton = document.getElementById("aiChatSendButton");
 const authAvatarPhoto = document.getElementById("authAvatarPhoto");
 const accountMenuPhoto = document.getElementById("accountMenuPhoto");
 const accountMenuInitials = document.getElementById("accountMenuInitials");
@@ -519,6 +510,587 @@ function handleAccountAccess() {
 
 }
 
+
+/* =========================================================
+   TRAVELBUDDY AI MODEL
+========================================================= */
+
+const firebaseAI =
+    getAI(
+        app,
+        {
+            backend:
+                new GoogleAIBackend()
+        }
+    );
+
+
+const travelBuddyModel =
+    getGenerativeModel(
+        firebaseAI,
+        {
+
+            model:
+                "gemini-3.7-flash",
+
+            generationConfig: {
+
+                temperature:
+                    0.35,
+
+                maxOutputTokens:
+                    450
+
+            }
+
+        }
+    );
+
+
+let travelBuddyChatSession =
+    null;
+
+/* =========================================================
+BUILD TRAVELBUDDY DESTINATION KNOWLEDGE
+========================================================= */
+
+function buildTravelBuddyKnowledge() {
+
+    const cards =
+        document.querySelectorAll(
+            ".featured-section .destination-card"
+        );
+
+
+    const places =
+        [];
+
+
+    cards.forEach(
+        card => {
+
+            const name =
+                card.dataset.name
+                ||
+                card.querySelector("h4")
+                    ?.textContent
+                    .trim()
+                ||
+                "";
+
+
+            const category =
+                card.dataset.category
+                ||
+                "";
+
+
+            const location =
+                card.querySelector(
+                    ".place"
+                )
+                    ?.textContent
+                    .trim()
+                ||
+                "";
+
+
+            const description =
+                card.querySelector(
+                    ".description"
+                )
+                    ?.textContent
+                    .trim()
+                ||
+                "";
+
+
+            const distance =
+                card.querySelector(
+                    ".distance"
+                )
+                    ?.textContent
+                    .trim()
+                ||
+                "";
+
+
+            const rating =
+                card.querySelector(
+                    ".rating-badge b"
+                )
+                    ?.textContent
+                    .trim()
+                ||
+                "";
+
+
+            places.push(
+                `
+Destination: ${name}
+Category: ${category}
+Location: ${location}
+Description: ${description}
+Distance shown in TravelBuddy: ${distance}
+Rating shown in TravelBuddy: ${rating}
+                `.trim()
+            );
+
+        }
+    );
+
+
+    return places.join(
+        "\n\n"
+    );
+
+}
+
+/* =========================================================
+   CREATE TRAVELBUDDY-ONLY CHAT SESSION
+========================================================= */
+
+function createTravelBuddyChatSession() {
+
+    const destinationKnowledge =
+        buildTravelBuddyKnowledge();
+
+
+    const systemInstruction =
+        `
+You are TravelBuddy AI, the tourism assistant inside the
+TravelBuddy Samar application.
+
+YOUR PURPOSE:
+Help travelers explore destinations and tourism information
+related to Samar and the TravelBuddy Samar application.
+
+STRICT SCOPE RULES:
+
+1. Only answer questions related to:
+   - TravelBuddy Samar
+   - tourism in Samar
+   - destinations listed in TravelBuddy
+   - beaches
+   - waterfalls
+   - caves
+   - rivers
+   - heritage locations
+   - accommodations
+   - food destinations
+   - trip suggestions using TravelBuddy information
+   - how to use TravelBuddy features such as Explore,
+     Map, Saved Places, ratings and destination details.
+
+2. If the user asks an unrelated question such as:
+   mathematics, programming, politics, homework,
+   general science, unrelated countries, or anything
+   outside TravelBuddy/Samar tourism, politely respond:
+
+   "I can only help with TravelBuddy Samar and
+   travel-related questions about Samar."
+
+3. Do NOT invent:
+   - entrance fees
+   - opening hours
+   - phone numbers
+   - transportation schedules
+   - weather
+   - current safety conditions
+   - exact travel times
+   - information not provided by TravelBuddy.
+
+4. If TravelBuddy does not contain the requested
+   information, clearly say that the information is
+   currently unavailable in TravelBuddy.
+
+5. Keep answers friendly, useful and concise.
+
+6. When recommending a place, explain briefly why
+   it matches the traveler's request.
+
+7. Do not claim that you searched the internet.
+
+TRAVELBUDDY CURRENT DESTINATION DATA:
+
+${destinationKnowledge}
+`;
+
+
+    return travelBuddyModel.startChat({
+
+        systemInstruction:
+            systemInstruction
+
+    });
+
+}
+
+/* =========================================================
+   ADD CHAT MESSAGE
+========================================================= */
+
+function addAiChatMessage(
+    message,
+    sender = "bot"
+) {
+
+    const messageElement =
+        document.createElement(
+            "div"
+        );
+
+
+    messageElement.className =
+        `ai-message ai-message-${sender}`;
+
+
+    if (
+        sender ===
+        "bot"
+    ) {
+
+        const avatar =
+            document.createElement(
+                "div"
+            );
+
+
+        avatar.className =
+            "ai-message-avatar";
+
+
+        avatar.innerHTML =
+            `<i data-lucide="bot"></i>`;
+
+
+        messageElement.appendChild(
+            avatar
+        );
+
+    }
+
+
+    const bubble =
+        document.createElement(
+            "div"
+        );
+
+
+    bubble.className =
+        "ai-message-bubble";
+
+
+    /*
+      SAFER THAN innerHTML
+    */
+
+    bubble.textContent =
+        message;
+
+
+    messageElement.appendChild(
+        bubble
+    );
+
+
+    aiChatMessages.appendChild(
+        messageElement
+    );
+
+
+    lucide.createIcons();
+
+
+    aiChatMessages.scrollTop =
+        aiChatMessages.scrollHeight;
+
+
+    return messageElement;
+
+}
+
+function showAiTyping() {
+
+    const typingMessage =
+        document.createElement(
+            "div"
+        );
+
+
+    typingMessage.className =
+        "ai-message ai-message-bot";
+
+
+    typingMessage.innerHTML = `
+        <div class="ai-message-avatar">
+            <i data-lucide="bot"></i>
+        </div>
+
+        <div class="ai-message-bubble">
+            <div class="ai-typing">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    `;
+
+
+    aiChatMessages.appendChild(
+        typingMessage
+    );
+
+
+    lucide.createIcons();
+
+
+    aiChatMessages.scrollTop =
+        aiChatMessages.scrollHeight;
+
+
+    return typingMessage;
+
+}
+
+/* =========================================================
+   SEND MESSAGE TO TRAVELBUDDY AI
+========================================================= */
+
+async function sendTravelBuddyMessage(
+    message
+) {
+
+    const cleanedMessage =
+        message.trim();
+
+
+    if (!cleanedMessage) {
+
+        return;
+
+    }
+
+
+    addAiChatMessage(
+        cleanedMessage,
+        "user"
+    );
+
+
+    aiChatInput.value =
+        "";
+
+
+    aiChatInput.style.height =
+        "";
+
+
+    aiChatSendButton.disabled =
+        true;
+
+
+    const typingMessage =
+        showAiTyping();
+
+
+    try {
+
+        if (
+            !travelBuddyChatSession
+        ) {
+
+            travelBuddyChatSession =
+                createTravelBuddyChatSession();
+
+        }
+
+
+        const result =
+            await travelBuddyChatSession
+                .sendMessage(
+                    cleanedMessage
+                );
+
+
+        const response =
+            result.response;
+
+
+        const text =
+            response.text();
+
+
+        typingMessage.remove();
+
+
+        addAiChatMessage(
+            text
+            ||
+            "I couldn't generate a response.",
+            "bot"
+        );
+
+
+    } catch (
+        error
+    ) {
+
+        console.error(
+            "TravelBuddy AI error:",
+            error
+        );
+
+
+        typingMessage.remove();
+
+
+        addAiChatMessage(
+            "Sorry, TravelBuddy AI is temporarily unavailable. Please try again.",
+            "bot"
+        );
+
+    } finally {
+
+        aiChatSendButton.disabled =
+            false;
+
+
+        aiChatInput.focus();
+
+    }
+
+}
+
+/* =========================================================
+   OPEN CHATBOT
+========================================================= */
+
+travelBuddyAiButton?.addEventListener(
+    "click",
+    () => {
+
+        const isOpen =
+            !aiChat.hidden;
+
+
+        aiChat.hidden =
+            isOpen;
+
+
+        if (!isOpen) {
+
+            aiChatInput?.focus();
+
+
+            if (
+                !travelBuddyChatSession
+            ) {
+
+                travelBuddyChatSession =
+                    createTravelBuddyChatSession();
+
+            }
+
+        }
+
+
+        lucide.createIcons();
+
+    }
+);
+
+
+/* =========================================================
+   CLOSE CHATBOT
+========================================================= */
+
+aiChatCloseButton?.addEventListener(
+    "click",
+    () => {
+
+        aiChat.hidden =
+            true;
+
+    }
+);
+
+aiChatForm?.addEventListener(
+    "submit",
+
+    async event => {
+
+        event.preventDefault();
+
+
+        await sendTravelBuddyMessage(
+            aiChatInput.value
+        );
+
+    }
+);
+
+document
+    .querySelectorAll(
+        "[data-ai-prompt]"
+    )
+    .forEach(
+        button => {
+
+            button.addEventListener(
+                "click",
+
+                () => {
+
+                    sendTravelBuddyMessage(
+                        button.dataset.aiPrompt
+                    );
+
+                }
+            );
+
+        }
+    );
+
+    aiChatInput?.addEventListener(
+    "input",
+    () => {
+
+        aiChatInput.style.height =
+            "auto";
+
+
+        aiChatInput.style.height =
+            `${Math.min(
+                aiChatInput.scrollHeight,
+                110
+            )}px`;
+
+    }
+);
+
+aiChatInput?.addEventListener(
+    "keydown",
+
+    event => {
+
+        if (
+            event.key ===
+            "Enter"
+            &&
+            !event.shiftKey
+        ) {
+
+            event.preventDefault();
+
+
+            aiChatForm
+                ?.requestSubmit();
+
+        }
+
+    }
+);
 
 /* =========================================
    OPEN AUTH MODAL
