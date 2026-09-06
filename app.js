@@ -1,6 +1,5 @@
 
-import { app, auth } from "./firebase-config.js";
-import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-ai.js";
+import { auth } from "./firebase-config.js";
 import {
     createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut,
     setPersistence,
@@ -510,48 +509,19 @@ function handleAccountAccess() {
 
 }
 
-
 /* =========================================================
-   TRAVELBUDDY AI MODEL
+   TRAVELBUDDY AI - CLOUDFLARE API
 ========================================================= */
 
-const firebaseAI =
-    getAI(
-        app,
-        {
-            backend:
-                new GoogleAIBackend()
-        }
-    );
+const TRAVELBUDDY_API_URL =
+    "https://travelbuddy-ai.rbbelas54.workers.dev/chat";
 
 
-const travelBuddyModel =
-    getGenerativeModel(
-        firebaseAI,
-        {
+let travelBuddyConversation = [];
 
-            model:
-                "gemini-3.7-flash",
-
-            generationConfig: {
-
-                temperature:
-                    0.35,
-
-                maxOutputTokens:
-                    450
-
-            }
-
-        }
-    );
-
-
-let travelBuddyChatSession =
-    null;
 
 /* =========================================================
-BUILD TRAVELBUDDY DESTINATION KNOWLEDGE
+   BUILD TRAVELBUDDY DESTINATION KNOWLEDGE
 ========================================================= */
 
 function buildTravelBuddyKnowledge() {
@@ -562,169 +532,77 @@ function buildTravelBuddyKnowledge() {
         );
 
 
-    const places =
-        [];
+    const places = [];
 
 
-    cards.forEach(
-        card => {
+    cards.forEach(card => {
 
-            const name =
-                card.dataset.name
-                ||
-                card.querySelector("h4")
-                    ?.textContent
-                    .trim()
-                ||
-                "";
-
-
-            const category =
-                card.dataset.category
-                ||
-                "";
+        const name =
+            card.dataset.name
+            ||
+            card.querySelector("h4")
+                ?.textContent
+                .trim()
+            ||
+            "";
 
 
-            const location =
-                card.querySelector(
-                    ".place"
-                )
-                    ?.textContent
-                    .trim()
-                ||
-                "";
+        const category =
+            card.dataset.category
+            ||
+            "";
 
 
-            const description =
-                card.querySelector(
-                    ".description"
-                )
-                    ?.textContent
-                    .trim()
-                ||
-                "";
+        const location =
+            card.querySelector(".place")
+                ?.textContent
+                .trim()
+            ||
+            "";
 
 
-            const distance =
-                card.querySelector(
-                    ".distance"
-                )
-                    ?.textContent
-                    .trim()
-                ||
-                "";
+        const description =
+            card.querySelector(".description")
+                ?.textContent
+                .trim()
+            ||
+            "";
 
 
-            const rating =
-                card.querySelector(
-                    ".rating-badge b"
-                )
-                    ?.textContent
-                    .trim()
-                ||
-                "";
+        const distance =
+            card.querySelector(".distance")
+                ?.textContent
+                .trim()
+            ||
+            "";
 
 
-            places.push(
-                `
+        const rating =
+            card.querySelector(".rating-badge b")
+                ?.textContent
+                .trim()
+            ||
+            "";
+
+
+        places.push(
+            `
 Destination: ${name}
 Category: ${category}
 Location: ${location}
 Description: ${description}
 Distance shown in TravelBuddy: ${distance}
 Rating shown in TravelBuddy: ${rating}
-                `.trim()
-            );
-
-        }
-    );
-
-
-    return places.join(
-        "\n\n"
-    );
-
-}
-
-/* =========================================================
-   CREATE TRAVELBUDDY-ONLY CHAT SESSION
-========================================================= */
-
-function createTravelBuddyChatSession() {
-
-    const destinationKnowledge =
-        buildTravelBuddyKnowledge();
-
-
-    const systemInstruction =
-        `
-You are TravelBuddy AI, the tourism assistant inside the
-TravelBuddy Samar application.
-
-YOUR PURPOSE:
-Help travelers explore destinations and tourism information
-related to Samar and the TravelBuddy Samar application.
-
-STRICT SCOPE RULES:
-
-1. Only answer questions related to:
-   - TravelBuddy Samar
-   - tourism in Samar
-   - destinations listed in TravelBuddy
-   - beaches
-   - waterfalls
-   - caves
-   - rivers
-   - heritage locations
-   - accommodations
-   - food destinations
-   - trip suggestions using TravelBuddy information
-   - how to use TravelBuddy features such as Explore,
-     Map, Saved Places, ratings and destination details.
-
-2. If the user asks an unrelated question such as:
-   mathematics, programming, politics, homework,
-   general science, unrelated countries, or anything
-   outside TravelBuddy/Samar tourism, politely respond:
-
-   "I can only help with TravelBuddy Samar and
-   travel-related questions about Samar."
-
-3. Do NOT invent:
-   - entrance fees
-   - opening hours
-   - phone numbers
-   - transportation schedules
-   - weather
-   - current safety conditions
-   - exact travel times
-   - information not provided by TravelBuddy.
-
-4. If TravelBuddy does not contain the requested
-   information, clearly say that the information is
-   currently unavailable in TravelBuddy.
-
-5. Keep answers friendly, useful and concise.
-
-6. When recommending a place, explain briefly why
-   it matches the traveler's request.
-
-7. Do not claim that you searched the internet.
-
-TRAVELBUDDY CURRENT DESTINATION DATA:
-
-${destinationKnowledge}
-`;
-
-
-    return travelBuddyModel.startChat({
-
-        systemInstruction:
-            systemInstruction
+`.trim()
+        );
 
     });
 
+
+    return places.join("\n\n");
+
 }
+
 
 /* =========================================================
    ADD CHAT MESSAGE
@@ -736,24 +614,17 @@ function addAiChatMessage(
 ) {
 
     const messageElement =
-        document.createElement(
-            "div"
-        );
+        document.createElement("div");
 
 
     messageElement.className =
         `ai-message ai-message-${sender}`;
 
 
-    if (
-        sender ===
-        "bot"
-    ) {
+    if (sender === "bot") {
 
         const avatar =
-            document.createElement(
-                "div"
-            );
+            document.createElement("div");
 
 
         avatar.className =
@@ -772,18 +643,12 @@ function addAiChatMessage(
 
 
     const bubble =
-        document.createElement(
-            "div"
-        );
+        document.createElement("div");
 
 
     bubble.className =
         "ai-message-bubble";
 
-
-    /*
-      SAFER THAN innerHTML
-    */
 
     bubble.textContent =
         message;
@@ -799,7 +664,13 @@ function addAiChatMessage(
     );
 
 
-    lucide.createIcons();
+    /* RESTORE LUCIDE ICONS */
+
+    if (window.lucide) {
+
+        window.lucide.createIcons();
+
+    }
 
 
     aiChatMessages.scrollTop =
@@ -810,12 +681,15 @@ function addAiChatMessage(
 
 }
 
+
+/* =========================================================
+   AI TYPING ANIMATION
+========================================================= */
+
 function showAiTyping() {
 
     const typingMessage =
-        document.createElement(
-            "div"
-        );
+        document.createElement("div");
 
 
     typingMessage.className =
@@ -842,7 +716,11 @@ function showAiTyping() {
     );
 
 
-    lucide.createIcons();
+    if (window.lucide) {
+
+        window.lucide.createIcons();
+
+    }
 
 
     aiChatMessages.scrollTop =
@@ -852,6 +730,7 @@ function showAiTyping() {
     return typingMessage;
 
 }
+
 
 /* =========================================================
    SEND MESSAGE TO TRAVELBUDDY AI
@@ -872,22 +751,46 @@ async function sendTravelBuddyMessage(
     }
 
 
+    /* USER MESSAGE */
+
     addAiChatMessage(
         cleanedMessage,
         "user"
     );
 
 
-    aiChatInput.value =
-        "";
+    aiChatInput.value = "";
 
-
-    aiChatInput.style.height =
-        "";
-
+    aiChatInput.style.height = "";
 
     aiChatSendButton.disabled =
         true;
+
+
+    /* SAVE CONVERSATION */
+
+    travelBuddyConversation.push({
+
+        role:
+            "user",
+
+        text:
+            cleanedMessage
+
+    });
+
+
+    if (
+        travelBuddyConversation.length >
+        12
+    ) {
+
+        travelBuddyConversation =
+            travelBuddyConversation.slice(
+                -12
+            );
+
+    }
 
 
     const typingMessage =
@@ -896,48 +799,117 @@ async function sendTravelBuddyMessage(
 
     try {
 
-        if (
-            !travelBuddyChatSession
-        ) {
+        const response =
+            await fetch(
+                TRAVELBUDDY_API_URL,
+                {
 
-            travelBuddyChatSession =
-                createTravelBuddyChatSession();
+                    method:
+                        "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body:
+                        JSON.stringify({
+
+                            messages:
+                                travelBuddyConversation,
+
+                            destinationKnowledge:
+                                buildTravelBuddyKnowledge()
+
+                        })
+
+                }
+            );
+
+
+        /*
+           Handle non-JSON responses safely
+        */
+
+        const responseText =
+            await response.text();
+
+
+        let data;
+
+
+        try {
+
+            data =
+                JSON.parse(
+                    responseText
+                );
+
+        } catch {
+
+            throw new Error(
+                `Worker returned an invalid response: ${responseText}`
+            );
 
         }
 
 
-        const result =
-            await travelBuddyChatSession
-                .sendMessage(
-                    cleanedMessage
-                );
+        if (!response.ok) {
+
+            throw new Error(
+                data?.error
+                ||
+                `Request failed: ${response.status}`
+            );
+
+        }
 
 
-        const response =
-            result.response;
-
-
-        const text =
-            response.text();
+        const reply =
+            data?.reply
+            ||
+            "I couldn't generate a response.";
 
 
         typingMessage.remove();
 
 
         addAiChatMessage(
-            text
-            ||
-            "I couldn't generate a response.",
+            reply,
             "bot"
         );
 
 
-    } catch (
-        error
-    ) {
+        travelBuddyConversation.push({
+
+            role:
+                "assistant",
+
+            text:
+                reply
+
+        });
+
+
+        if (
+            travelBuddyConversation.length >
+            12
+        ) {
+
+            travelBuddyConversation =
+                travelBuddyConversation.slice(
+                    -12
+                );
+
+        }
+
+
+    } catch (error) {
 
         console.error(
-            "TravelBuddy AI error:",
+            "TRAVELBUDDY AI ERROR:",
             error
         );
 
@@ -946,9 +918,10 @@ async function sendTravelBuddyMessage(
 
 
         addAiChatMessage(
-            "Sorry, TravelBuddy AI is temporarily unavailable. Please try again.",
+            "Sorry, I couldn't connect to TravelBuddy AI. Please try again.",
             "bot"
         );
+
 
     } finally {
 
@@ -956,18 +929,20 @@ async function sendTravelBuddyMessage(
             false;
 
 
-        aiChatInput.focus();
+        aiChatInput?.focus();
 
     }
 
 }
 
+
 /* =========================================================
-   OPEN CHATBOT
+   OPEN / CLOSE CHATBOT
 ========================================================= */
 
 travelBuddyAiButton?.addEventListener(
     "click",
+
     () => {
 
         const isOpen =
@@ -982,20 +957,18 @@ travelBuddyAiButton?.addEventListener(
 
             aiChatInput?.focus();
 
-
-            if (
-                !travelBuddyChatSession
-            ) {
-
-                travelBuddyChatSession =
-                    createTravelBuddyChatSession();
-
-            }
-
         }
 
 
-        lucide.createIcons();
+        /*
+           RESTORE ALL LUCIDE ICONS
+        */
+
+        if (window.lucide) {
+
+            window.lucide.createIcons();
+
+        }
 
     }
 );
@@ -1007,6 +980,7 @@ travelBuddyAiButton?.addEventListener(
 
 aiChatCloseButton?.addEventListener(
     "click",
+
     () => {
 
         aiChat.hidden =
@@ -1014,6 +988,11 @@ aiChatCloseButton?.addEventListener(
 
     }
 );
+
+
+/* =========================================================
+   SEND FORM
+========================================================= */
 
 aiChatForm?.addEventListener(
     "submit",
@@ -1030,30 +1009,39 @@ aiChatForm?.addEventListener(
     }
 );
 
+
+/* =========================================================
+   QUICK PROMPTS
+========================================================= */
+
 document
     .querySelectorAll(
         "[data-ai-prompt]"
     )
-    .forEach(
-        button => {
+    .forEach(button => {
 
-            button.addEventListener(
-                "click",
+        button.addEventListener(
+            "click",
 
-                () => {
+            async () => {
 
-                    sendTravelBuddyMessage(
-                        button.dataset.aiPrompt
-                    );
+                await sendTravelBuddyMessage(
+                    button.dataset.aiPrompt
+                );
 
-                }
-            );
+            }
+        );
 
-        }
-    );
+    });
 
-    aiChatInput?.addEventListener(
+
+/* =========================================================
+   AUTO GROW TEXTAREA
+========================================================= */
+
+aiChatInput?.addEventListener(
     "input",
+
     () => {
 
         aiChatInput.style.height =
@@ -1069,14 +1057,18 @@ document
     }
 );
 
+
+/* =========================================================
+   ENTER TO SEND
+========================================================= */
+
 aiChatInput?.addEventListener(
     "keydown",
 
     event => {
 
         if (
-            event.key ===
-            "Enter"
+            event.key === "Enter"
             &&
             !event.shiftKey
         ) {
@@ -1091,6 +1083,17 @@ aiChatInput?.addEventListener(
 
     }
 );
+
+
+/* =========================================================
+   ENSURE ICONS ARE DRAWN
+========================================================= */
+
+if (window.lucide) {
+
+    window.lucide.createIcons();
+
+}
 
 /* =========================================
    OPEN AUTH MODAL
