@@ -4070,3 +4070,115 @@ body.details-modal-open {
 .account-menu-item.logout {
     color: #d93a3a;
 }
+
+/* =========================================================
+   MOBILE AI BUTTON
+   ICON FIRST → EXPAND ON HOVER
+========================================================= */
+
+@media(max-width:700px){
+
+    /* NORMAL STATE - ICON ONLY */
+
+    .floating-ai,
+    .page.map-mode .floating-ai{
+
+        right:14px;
+
+        bottom:
+            calc(
+                82px
+                +
+                env(safe-area-inset-bottom)
+            );
+
+        width:48px;
+        height:48px;
+
+        padding:0;
+
+        display:flex;
+        align-items:center;
+        justify-content:center;
+
+        gap:0;
+
+        overflow:hidden;
+
+        border-radius:50%;
+
+        font-size:13px;
+
+        white-space:nowrap;
+
+        transition:
+            width .25s ease,
+            padding .25s ease,
+            gap .25s ease,
+            border-radius .25s ease;
+    }
+
+
+    .floating-ai svg,
+    .page.map-mode .floating-ai svg{
+
+        width:18px;
+        height:18px;
+
+        flex-shrink:0;
+    }
+
+
+    /* TEXT HIDDEN INITIALLY */
+
+    .floating-ai span,
+    .page.map-mode .floating-ai span{
+
+        display:block !important;
+
+        max-width:0 !important;
+
+        opacity:0 !important;
+
+        overflow:hidden;
+
+        white-space:nowrap;
+
+        transition:
+            max-width .25s ease,
+            opacity .2s ease;
+    }
+
+
+    /* =========================================
+       HOVER - EXPAND BUTTON
+    ========================================= */
+
+    .floating-ai:hover,
+    .page.map-mode .floating-ai:hover{
+
+        width:210px;
+
+        padding:
+            0
+            17px;
+
+        gap:8px;
+
+        border-radius:24px;
+
+        justify-content:flex-start;
+    }
+
+
+    /* SHOW TEXT ON HOVER */
+
+    .floating-ai:hover span,
+    .page.map-mode .floating-ai:hover span{
+
+        max-width:160px !important;
+
+        opacity:1 !important;
+    }
+
+}
