@@ -129,8 +129,12 @@
         </button>
 
 
-        <button class="avatar-btn" aria-label="Profile">
-          JR
+        <button class="avatar-btn auth-avatar-btn" id="authAvatarButton" type="button" aria-label="Account">
+          <i class="auth-avatar-icon" id="authAvatarIcon" data-lucide="user-round"></i>
+
+          <span class="auth-avatar-initials" id="authAvatarInitials" hidden>
+            JR
+          </span>
         </button>
 
       </div>
@@ -654,6 +658,315 @@
 
     </div>
 
+    <!-- =========================================
+     AUTHENTICATION MODAL
+========================================= -->
+
+    <div class="auth-modal" id="authModal" hidden>
+
+      <div class="auth-backdrop" id="authBackdrop"></div>
+
+
+      <div class="auth-panel">
+
+        <!-- CLOSE -->
+        <button class="auth-close-btn" id="authCloseButton" type="button" aria-label="Close">
+          <i data-lucide="x"></i>
+        </button>
+
+
+        <!-- LOGO -->
+        <div class="auth-brand">
+
+          <div class="auth-brand-icon">
+            <i data-lucide="compass"></i>
+          </div>
+
+          <div>
+            <h2>TravelBuddy Samar</h2>
+            <p>
+              Sign in to save and review destinations.
+            </p>
+          </div>
+
+        </div>
+
+
+        <!-- TABS -->
+        <div class="auth-tabs">
+
+          <button class="auth-tab active" id="signInTab" type="button">
+            Sign In
+          </button>
+
+          <button class="auth-tab" id="signUpTab" type="button">
+            Sign Up
+          </button>
+
+        </div>
+
+
+        <!-- =================================
+         SIGN IN FORM
+    ================================== -->
+
+        <form class="auth-form" id="signInForm">
+
+          <div class="auth-field">
+
+            <label for="signInEmail">
+              Email
+            </label>
+
+            <div class="auth-input-wrap">
+
+              <i data-lucide="mail"></i>
+
+              <input id="signInEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
+
+            </div>
+
+          </div>
+
+
+          <div class="auth-field">
+
+            <label for="signInPassword">
+              Password
+            </label>
+
+            <div class="auth-input-wrap">
+
+              <i data-lucide="lock-keyhole"></i>
+
+              <input id="signInPassword" type="password" placeholder="Enter your password"
+                autocomplete="current-password" required>
+
+              <button class="auth-password-toggle" type="button" data-password-target="signInPassword"
+                aria-label="Show password">
+                <i data-lucide="eye"></i>
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <div class="auth-form-options">
+
+            <label class="auth-remember">
+
+              <input type="checkbox" id="rememberMe">
+
+              <span>
+                Remember me
+              </span>
+
+            </label>
+
+
+            <button class="forgot-password-btn" type="button">
+              Forgot password?
+            </button>
+
+          </div>
+
+
+          <button class="auth-primary-btn" type="submit">
+            Sign In
+          </button>
+
+
+          <p class="auth-switch-text">
+
+            Don't have an account?
+
+            <button id="openSignUpButton" type="button">
+              Sign Up
+            </button>
+
+          </p>
+
+        </form>
+
+
+        <!-- =================================
+         SIGN UP FORM
+    ================================== -->
+
+        <form class="auth-form" id="signUpForm" hidden>
+
+          <div class="auth-name-row">
+
+            <div class="auth-field">
+
+              <label for="signUpFirstName">
+                First Name
+              </label>
+
+              <div class="auth-input-wrap">
+
+                <i data-lucide="user"></i>
+
+                <input id="signUpFirstName" type="text" placeholder="Juan" autocomplete="given-name" required>
+
+              </div>
+
+            </div>
+
+
+            <div class="auth-field">
+
+              <label for="signUpLastName">
+                Last Name
+              </label>
+
+              <div class="auth-input-wrap">
+
+                <i data-lucide="user"></i>
+
+                <input id="signUpLastName" type="text" placeholder="Reyes" autocomplete="family-name" required>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div class="auth-field">
+
+            <label for="signUpEmail">
+              Email
+            </label>
+
+            <div class="auth-input-wrap">
+
+              <i data-lucide="mail"></i>
+
+              <input id="signUpEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
+
+            </div>
+
+          </div>
+
+
+          <div class="auth-field">
+
+            <label for="signUpPassword">
+              Password
+            </label>
+
+            <div class="auth-input-wrap">
+
+              <i data-lucide="lock-keyhole"></i>
+
+              <input id="signUpPassword" type="password" minlength="6" placeholder="At least 6 characters"
+                autocomplete="new-password" required>
+
+              <button class="auth-password-toggle" type="button" data-password-target="signUpPassword"
+                aria-label="Show password">
+                <i data-lucide="eye"></i>
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <div class="auth-field">
+
+            <label for="signUpConfirmPassword">
+              Confirm Password
+            </label>
+
+            <div class="auth-input-wrap">
+
+              <i data-lucide="lock-keyhole"></i>
+
+              <input id="signUpConfirmPassword" type="password" minlength="6" placeholder="Repeat your password"
+                autocomplete="new-password" required>
+
+            </div>
+
+          </div>
+
+
+          <button class="auth-primary-btn" type="submit">
+            Create Account
+          </button>
+
+
+          <p class="auth-switch-text">
+
+            Already have an account?
+
+            <button id="openSignInButton" type="button">
+              Sign In
+            </button>
+
+          </p>
+
+        </form>
+
+
+        <!-- MESSAGE -->
+        <div class="auth-message" id="authMessage" hidden></div>
+
+      </div>
+
+    </div>
+
+    <!-- =========================================
+     ACCOUNT MENU
+========================================= -->
+
+    <div class="account-menu" id="accountMenu" hidden>
+
+      <div class="account-menu-user">
+
+        <div class="account-menu-avatar" id="accountMenuAvatar">
+          JR
+        </div>
+
+
+        <div>
+
+          <strong id="accountMenuName">
+            Juan Reyes
+          </strong>
+
+          <span id="accountMenuEmail">
+            juan@example.com
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <div class="account-menu-divider"></div>
+
+
+      <button class="account-menu-item" id="accountProfileButton" type="button">
+        <i data-lucide="user-round"></i>
+
+        <span>
+          Profile
+        </span>
+      </button>
+
+
+      <button class="account-menu-item logout" id="logoutButton" type="button">
+        <i data-lucide="log-out"></i>
+
+        <span>
+          Log Out
+        </span>
+      </button>
+
+    </div>
+
     <button class="floating-ai">
       <i data-lucide="bot"></i>
       <span>Ask TravelBuddy AI</span>
@@ -702,7 +1015,8 @@
 
 
       <!-- PROFILE -->
-      <button class="nav-item" type="button">
+      <!-- PROFILE -->
+      <button class="nav-item" id="profileNavButton" type="button">
         <i data-lucide="user-round"></i>
 
         <span>

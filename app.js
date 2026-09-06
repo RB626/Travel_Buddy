@@ -5,34 +5,40 @@ lucide.createIcons();
    GET ELEMENTS
 ========================================= */
 
-const SAVED_STORAGE_KEY =
-    "travelBuddySavedPlaces";
+/* =========================================
+   AUTH ELEMENTS
+========================================= */
 
-
-const RATINGS_STORAGE_KEY =
-    "travelBuddyPlaceRatings";
-
-const COMMENTS_STORAGE_KEY =
-    "travelBuddyPlaceComments";
-
-const mapNavButton =
-    document.getElementById("mapNavButton");
-
-const mapSection =
-    document.getElementById("mapSection");
-
-const mapShowAllButton =
-    document.getElementById("mapShowAllButton");
-
-const streetMapButton =
-    document.getElementById(
-        "streetMapButton"
-    );
-
-const satelliteMapButton =
-    document.getElementById(
-        "satelliteMapButton"
-    );
+const profileNavButton = document.getElementById("profileNavButton");
+const accountProfileButton = document.getElementById("accountProfileButton");
+const authAvatarButton = document.getElementById("authAvatarButton");
+const authAvatarIcon = document.getElementById("authAvatarIcon");
+const authAvatarInitials = document.getElementById("authAvatarInitials");
+const authModal = document.getElementById("authModal");
+const authBackdrop = document.getElementById("authBackdrop");
+const authCloseButton = document.getElementById("authCloseButton");
+const signInTab = document.getElementById("signInTab");
+const signUpTab = document.getElementById("signUpTab");
+const signInForm = document.getElementById("signInForm");
+const signUpForm = document.getElementById("signUpForm");
+const openSignUpButton = document.getElementById("openSignUpButton");
+const openSignInButton = document.getElementById("openSignInButton");
+const authMessage = document.getElementById("authMessage");
+const accountMenu = document.getElementById("accountMenu");
+const accountMenuName = document.getElementById("accountMenuName");
+const accountMenuEmail = document.getElementById("accountMenuEmail");
+const accountMenuAvatar = document.getElementById("accountMenuAvatar");
+const logoutButton = document.getElementById("logoutButton");
+const AUTH_USER_KEY = "travelBuddyCurrentUser";
+const AUTH_ACCOUNTS_KEY = "travelBuddyAccounts";
+const SAVED_STORAGE_KEY = "travelBuddySavedPlaces";
+const RATINGS_STORAGE_KEY = "travelBuddyPlaceRatings";
+const COMMENTS_STORAGE_KEY = "travelBuddyPlaceComments";
+const mapNavButton = document.getElementById("mapNavButton");
+const mapSection = document.getElementById("mapSection");
+const mapShowAllButton = document.getElementById("mapShowAllButton");
+const streetMapButton = document.getElementById("streetMapButton");
+const satelliteMapButton = document.getElementById("satelliteMapButton");
 
 
 /* =========================================
@@ -197,6 +203,639 @@ let satelliteLayer = null;
 ========================================= */
 
 let activeCategory = "All";
+
+function handleAccountAccess() {
+
+    const user =
+        getCurrentUser();
+
+
+    /*
+      USER IS NOT LOGGED IN
+    */
+
+    if (!user) {
+
+        /*
+          ALWAYS OPEN SIGN IN FIRST
+        */
+
+        showSignIn();
+
+        openAuthModal();
+
+        return;
+
+    }
+
+
+    /*
+      USER IS LOGGED IN
+    */
+
+    accountMenu.hidden =
+        !accountMenu.hidden;
+
+}
+
+function getCurrentUser() {
+
+    try {
+
+        return JSON.parse(
+            localStorage.getItem(
+                AUTH_USER_KEY
+            )
+        );
+
+    } catch {
+
+        return null;
+
+    }
+
+}
+
+
+function saveCurrentUser(user) {
+
+    localStorage.setItem(
+        AUTH_USER_KEY,
+        JSON.stringify(user)
+    );
+
+}
+
+
+function getAccounts() {
+
+    try {
+
+        const accounts =
+            JSON.parse(
+                localStorage.getItem(
+                    AUTH_ACCOUNTS_KEY
+                )
+            );
+
+        return Array.isArray(accounts)
+            ? accounts
+            : [];
+
+    } catch {
+
+        return [];
+
+    }
+
+}
+
+
+function saveAccounts(accounts) {
+
+    localStorage.setItem(
+        AUTH_ACCOUNTS_KEY,
+        JSON.stringify(accounts)
+    );
+
+}
+
+function getUserInitials(user) {
+
+    if (!user) {
+        return "";
+    }
+
+
+    const first =
+        user.firstName
+            ?.trim()
+            .charAt(0)
+            .toUpperCase()
+        || "";
+
+
+    const last =
+        user.lastName
+            ?.trim()
+            .charAt(0)
+            .toUpperCase()
+        || "";
+
+
+    return `${first}${last}` || "U";
+
+}
+
+function updateAuthUI() {
+
+    const user =
+        getCurrentUser();
+
+
+    if (!user) {
+
+        authAvatarIcon.hidden =
+            false;
+
+        authAvatarInitials.hidden =
+            true;
+
+        accountMenu.hidden =
+            true;
+
+        return;
+
+    }
+
+
+    const initials =
+        getUserInitials(user);
+
+
+    authAvatarIcon.hidden =
+        true;
+
+    authAvatarInitials.hidden =
+        false;
+
+    authAvatarInitials.textContent =
+        initials;
+
+
+    accountMenuAvatar.textContent =
+        initials;
+
+
+    accountMenuName.textContent =
+        `${user.firstName} ${user.lastName}`;
+
+
+    accountMenuEmail.textContent =
+        user.email;
+
+}
+
+function openAuthModal() {
+
+    authModal.hidden =
+        false;
+
+    accountMenu.hidden =
+        true;
+
+    document.body.style.overflow =
+        "hidden";
+
+}
+
+
+function closeAuthModal() {
+
+    authModal.hidden =
+        true;
+
+    authMessage.hidden =
+        true;
+
+    document.body.style.overflow =
+        "";
+
+}
+
+authAvatarButton?.addEventListener(
+    "click",
+    event => {
+
+        event.stopPropagation();
+
+        handleAccountAccess();
+
+    }
+);
+
+
+/* =========================================
+   PROFILE NAVIGATION
+========================================= */
+
+profileNavButton?.addEventListener(
+    "click",
+    event => {
+
+        event.stopPropagation();
+
+
+        const user =
+            getCurrentUser();
+
+
+        /*
+          NOT LOGGED IN
+          ↓
+          OPEN SIGN IN / SIGN UP
+        */
+
+        if (!user) {
+
+            showSignIn();
+
+            openAuthModal();
+
+            return;
+
+        }
+
+
+        /*
+          ALREADY LOGGED IN
+          ↓
+          OPEN ACCOUNT MENU
+        */
+
+        accountMenu.hidden =
+            !accountMenu.hidden;
+
+    }
+);
+
+function showSignIn() {
+
+    signInTab.classList.add(
+        "active"
+    );
+
+    signUpTab.classList.remove(
+        "active"
+    );
+
+
+    signInForm.hidden =
+        false;
+
+    signUpForm.hidden =
+        true;
+
+
+    authMessage.hidden =
+        true;
+
+}
+
+
+function showSignUp() {
+
+    signUpTab.classList.add(
+        "active"
+    );
+
+    signInTab.classList.remove(
+        "active"
+    );
+
+
+    signUpForm.hidden =
+        false;
+
+    signInForm.hidden =
+        true;
+
+
+    authMessage.hidden =
+        true;
+
+}
+
+
+signInTab?.addEventListener(
+    "click",
+    showSignIn
+);
+
+
+signUpTab?.addEventListener(
+    "click",
+    showSignUp
+);
+
+
+openSignUpButton?.addEventListener(
+    "click",
+    showSignUp
+);
+
+
+openSignInButton?.addEventListener(
+    "click",
+    showSignIn
+);
+
+signUpForm?.addEventListener(
+    "submit",
+    event => {
+
+        event.preventDefault();
+
+
+        const firstName =
+            document
+                .getElementById(
+                    "signUpFirstName"
+                )
+                .value
+                .trim();
+
+
+        const lastName =
+            document
+                .getElementById(
+                    "signUpLastName"
+                )
+                .value
+                .trim();
+
+
+        const email =
+            document
+                .getElementById(
+                    "signUpEmail"
+                )
+                .value
+                .trim()
+                .toLowerCase();
+
+
+        const password =
+            document
+                .getElementById(
+                    "signUpPassword"
+                )
+                .value;
+
+
+        const confirmPassword =
+            document
+                .getElementById(
+                    "signUpConfirmPassword"
+                )
+                .value;
+
+
+        if (
+            password !==
+            confirmPassword
+        ) {
+
+            authMessage.hidden =
+                false;
+
+            authMessage.classList.add(
+                "error"
+            );
+
+            authMessage.textContent =
+                "Passwords do not match.";
+
+            return;
+
+        }
+
+
+        const accounts =
+            getAccounts();
+
+
+        const accountExists =
+            accounts.some(
+                account =>
+                    account.email === email
+            );
+
+
+        if (accountExists) {
+
+            authMessage.hidden =
+                false;
+
+            authMessage.classList.add(
+                "error"
+            );
+
+            authMessage.textContent =
+                "An account with this email already exists.";
+
+            return;
+
+        }
+
+
+        const newAccount = {
+
+            firstName,
+            lastName,
+            email,
+            password
+
+        };
+
+
+        accounts.push(
+            newAccount
+        );
+
+
+        saveAccounts(
+            accounts
+        );
+
+
+        saveCurrentUser({
+
+            firstName,
+            lastName,
+            email
+
+        });
+
+
+        authMessage.classList.remove(
+            "error"
+        );
+
+
+        updateAuthUI();
+
+        closeAuthModal();
+
+        signUpForm.reset();
+
+    }
+);
+
+signInForm?.addEventListener(
+    "submit",
+    event => {
+
+        event.preventDefault();
+
+
+        const email =
+            document
+                .getElementById(
+                    "signInEmail"
+                )
+                .value
+                .trim()
+                .toLowerCase();
+
+
+        const password =
+            document
+                .getElementById(
+                    "signInPassword"
+                )
+                .value;
+
+
+        const accounts =
+            getAccounts();
+
+
+        const account =
+            accounts.find(
+                item =>
+                    item.email === email
+                    &&
+                    item.password === password
+            );
+
+
+        if (!account) {
+
+            authMessage.hidden =
+                false;
+
+            authMessage.classList.add(
+                "error"
+            );
+
+            authMessage.textContent =
+                "Incorrect email or password.";
+
+            return;
+
+        }
+
+
+        saveCurrentUser({
+
+            firstName:
+                account.firstName,
+
+            lastName:
+                account.lastName,
+
+            email:
+                account.email
+
+        });
+
+
+        updateAuthUI();
+
+        closeAuthModal();
+
+        signInForm.reset();
+
+    }
+);
+
+logoutButton?.addEventListener(
+    "click",
+    () => {
+
+        localStorage.removeItem(
+            AUTH_USER_KEY
+        );
+
+
+        accountMenu.hidden =
+            true;
+
+
+        updateAuthUI();
+
+    }
+);
+
+authCloseButton?.addEventListener(
+    "click",
+    closeAuthModal
+);
+
+
+authBackdrop?.addEventListener(
+    "click",
+    closeAuthModal
+);
+
+document.addEventListener(
+    "click",
+    event => {
+
+        if (
+            !accountMenu?.contains(
+                event.target
+            )
+            &&
+            !authAvatarButton?.contains(
+                event.target
+            )
+        ) {
+
+            accountMenu.hidden =
+                true;
+
+        }
+
+    }
+);
+
+document
+    .querySelectorAll(
+        ".auth-password-toggle"
+    )
+    .forEach(button => {
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                const targetId =
+                    button.dataset
+                        .passwordTarget;
+
+
+                const input =
+                    document.getElementById(
+                        targetId
+                    );
+
+
+                if (!input) {
+                    return;
+                }
+
+
+                input.type =
+                    input.type === "password"
+                        ? "text"
+                        : "password";
+
+            }
+        );
+
+    });
 
 function createTravelMapIcon() {
 
@@ -2062,7 +2701,7 @@ document.addEventListener(
 );
 
 updateFavoriteButtons();
-
+updateAuthUI();
 updateSavedCount();
 
 /* =========================================
