@@ -4154,59 +4154,131 @@ document.addEventListener(
 updateFavoriteButtons();
 updateSavedCount();
 
-/* =========================================
-   MAP RESPONSIVE RESIZE FIX
-========================================= */
+/* =========================================================
+   GOOGLE MAPS RESPONSIVE RESIZE FIX
+========================================================= */
+
+let googleMapResizeTimer =
+    null;
+
+
+function refreshGoogleMapLayout() {
+
+    if (
+        !travelMap
+        ||
+        !window.google
+        ||
+        !window.google.maps
+    ) {
+
+        return;
+
+    }
+
+
+    const currentCenter =
+        travelMap.getCenter();
+
+
+    /*
+       Google Maps handles responsive resizing itself.
+
+       Re-setting the current center ensures the map
+       remains positioned correctly after mobile
+       viewport changes.
+    */
+
+    if (
+        currentCenter
+    ) {
+
+        travelMap.setCenter(
+            currentCenter
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   WINDOW RESIZE
+========================================================= */
 
 window.addEventListener(
     "resize",
     () => {
 
         if (
-            travelMap
-            &&
-            page?.classList.contains(
+            !travelMap
+            ||
+            !page?.classList.contains(
                 "map-mode"
             )
         ) {
 
-            setTimeout(
-                () => {
-
-                    travelMap.invalidateSize();
-
-                },
-                100
-            );
+            return;
 
         }
 
+
+        clearTimeout(
+            googleMapResizeTimer
+        );
+
+
+        googleMapResizeTimer =
+            setTimeout(
+                () => {
+
+                    refreshGoogleMapLayout();
+
+                },
+                180
+            );
+
     }
 );
+
+
+/* =========================================================
+   PHONE ORIENTATION
+========================================================= */
 
 window.addEventListener(
     "orientationchange",
     () => {
 
-        if (!travelMap) {
+        if (
+            !travelMap
+        ) {
+
             return;
+
         }
 
 
-        setTimeout(
-            () => {
-
-                travelMap.invalidateSize();
-
-            },
-            250
+        clearTimeout(
+            googleMapResizeTimer
         );
+
+
+        googleMapResizeTimer =
+            setTimeout(
+                () => {
+
+                    refreshGoogleMapLayout();
+
+                },
+                400
+            );
 
     }
 );
 
 /* =========================================================
-   MOBILE-FRIENDLY STREET VIEW BUTTON
+   MOBILE-FRIENDLY STREET VIEW
 ========================================================= */
 
 streetViewButton?.addEventListener(
@@ -4239,19 +4311,16 @@ streetViewButton?.addEventListener(
             true;
 
 
-        const originalText =
-            streetViewButton
-                .querySelector(
-                    "span"
-                )
-                ?.textContent;
-
-
         const label =
-            streetViewButton
-                .querySelector(
-                    "span"
-                );
+            streetViewButton.querySelector(
+                "span"
+            );
+
+
+        const originalText =
+            label?.textContent
+            ||
+            "Street View";
 
 
         if (
@@ -4272,60 +4341,111 @@ streetViewButton?.addEventListener(
 
 
             /*
-               Search nearby roads.
+               Search progressively farther away.
 
-               Start with 100 meters.
+               This is much better for rural Samar
+               where Street View roads may not be
+               immediately beside the map center.
             */
 
-            const response =
-                await streetViewService
-                    .getPanorama({
-
-                        location:
-                            center,
-
-                        radius:
-                            100,
-
-                        preference:
-                            google.maps
-                                .StreetViewPreference
-                                .NEAREST,
-
-                        source:
-                            google.maps
-                                .StreetViewSource
-                                .OUTDOOR
-
-                    });
+            const searchRadii = [
+                100,
+                300,
+                750,
+                1500,
+                3000
+            ];
 
 
-            const panorama =
-                travelMap
-                    .getStreetView();
+            let streetViewResult =
+                null;
 
 
-            const panoLocation =
-                response
+            for (
+                const radius
+                of
+                searchRadii
+            ) {
+
+                try {
+
+                    streetViewResult =
+                        await streetViewService
+                            .getPanorama({
+
+                                location:
+                                    center,
+
+                                radius:
+                                    radius,
+
+                                preference:
+                                    google.maps
+                                        .StreetViewPreference
+                                        .NEAREST,
+
+                                source:
+                                    google.maps
+                                        .StreetViewSource
+                                        .DEFAULT
+
+                            });
+
+
+                    if (
+                        streetViewResult
+                            ?.data
+                            ?.location
+                            ?.pano
+                    ) {
+
+                        break;
+
+                    }
+
+
+                } catch (
+                error
+                ) {
+
+                    /*
+                       ZERO_RESULTS means simply:
+                       try a wider radius.
+                    */
+
+                    console.log(
+                        `No Street View within ${radius}m`
+                    );
+
+                }
+
+            }
+
+
+            const pano =
+                streetViewResult
                     ?.data
-                    ?.location;
+                    ?.location
+                    ?.pano;
 
 
             if (
-                !panoLocation
-                ||
-                !panoLocation.pano
+                !pano
             ) {
 
                 throw new Error(
-                    "No Street View found."
+                    "No nearby Street View imagery."
                 );
 
             }
 
 
+            const panorama =
+                travelMap.getStreetView();
+
+
             panorama.setPano(
-                panoLocation.pano
+                pano
             );
 
 
@@ -4355,13 +4475,8 @@ streetViewButton?.addEventListener(
             );
 
 
-            /*
-               Use your own toast here if
-               you already have one.
-            */
-
             alert(
-                "No Street View is available near this location. Zoom closer to a road and try again."
+                "Google Street View is not available near this location."
             );
 
         } finally {
@@ -4375,9 +4490,7 @@ streetViewButton?.addEventListener(
             ) {
 
                 label.textContent =
-                    originalText
-                    ||
-                    "Street View";
+                    originalText;
 
             }
 
