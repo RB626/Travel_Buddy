@@ -5754,87 +5754,86 @@ body.details-modal-open {
    COMPACT MOBILE MAP STYLE SWITCH
 ========================================================= */
 
-@media (max-width:700px){
+@media (max-width:700px) {
 
-    .map-style-switch{
+    .map-style-switch {
 
-        position:absolute !important;
+        position: absolute !important;
 
-        top:10px !important;
-        left:10px !important;
-        right:auto !important;
+        top: 10px !important;
+        left: 10px !important;
+        right: auto !important;
 
-        width:auto !important;
-        max-width:calc(100% - 20px) !important;
+        width: auto !important;
+        max-width: calc(100% - 20px) !important;
 
-        display:flex !important;
+        display: flex !important;
 
-        align-items:center !important;
+        align-items: center !important;
 
-        gap:5px !important;
+        gap: 5px !important;
 
-        padding:4px !important;
+        padding: 4px !important;
 
-        border-radius:22px !important;
+        border-radius: 22px !important;
 
-        overflow-x:auto !important;
-        overflow-y:hidden !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
 
-        background:rgba(255,255,255,.96) !important;
+        background: rgba(255, 255, 255, .96) !important;
 
         box-shadow:
-            0 3px 12px
-            rgba(20,50,65,.12) !important;
+            0 3px 12px rgba(20, 50, 65, .12) !important;
 
-        scrollbar-width:none;
-        -ms-overflow-style:none;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
 
-        z-index:20 !important;
+        z-index: 20 !important;
     }
 
 
-    .map-style-switch::-webkit-scrollbar{
-        display:none;
+    .map-style-switch::-webkit-scrollbar {
+        display: none;
     }
 
 
-    .map-style-btn{
+    .map-style-btn {
 
-        width:auto !important;
-        min-width:auto !important;
+        width: auto !important;
+        min-width: auto !important;
 
-        height:36px !important;
+        height: 36px !important;
 
         padding:
             0 12px !important;
 
-        display:flex !important;
+        display: flex !important;
 
-        align-items:center !important;
-        justify-content:center !important;
+        align-items: center !important;
+        justify-content: center !important;
 
-        gap:5px !important;
+        gap: 5px !important;
 
-        border-radius:18px !important;
+        border-radius: 18px !important;
 
-        font-size:11px !important;
+        font-size: 11px !important;
 
-        white-space:nowrap !important;
+        white-space: nowrap !important;
 
-        flex:0 0 auto !important;
+        flex: 0 0 auto !important;
     }
 
 
-    .map-style-btn svg{
+    .map-style-btn svg {
 
-        width:15px !important;
-        height:15px !important;
+        width: 15px !important;
+        height: 15px !important;
 
-        flex-shrink:0 !important;
+        flex-shrink: 0 !important;
     }
 
 
-    .map-style-btn.active{
+    .map-style-btn.active {
 
         padding:
             0 14px !important;
@@ -5842,17 +5841,91 @@ body.details-modal-open {
 
 }
 
-@media (max-width:700px){
+@media (max-width:700px) {
 
-    .map-style-btn span{
-        display:none;
+    .map-style-btn span {
+        display: none;
     }
 
-    .map-style-btn{
-        width:38px !important;
-        height:38px !important;
-        padding:0 !important;
-        border-radius:50% !important;
+    .map-style-btn {
+        width: 38px !important;
+        height: 38px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+    }
+
+}
+
+/* =========================================================
+   FINAL MOBILE MAP CONTROLS
+   STREET + SATELLITE ONLY
+========================================================= */
+
+@media (max-width:700px) {
+
+    .map-style-switch {
+
+        position: absolute !important;
+
+        top: 10px !important;
+        left: 10px !important;
+        right: auto !important;
+
+        width: auto !important;
+
+        display: flex !important;
+
+        align-items: center !important;
+
+        gap: 5px !important;
+
+        padding: 4px !important;
+
+        border-radius: 22px !important;
+
+        background:
+            rgba(255, 255, 255, .96) !important;
+
+        box-shadow:
+            0 3px 12px rgba(20, 50, 65, .12) !important;
+
+        overflow: visible !important;
+
+        z-index: 20 !important;
+    }
+
+
+    .map-style-btn {
+
+        width: 38px !important;
+        height: 38px !important;
+
+        min-width: 38px !important;
+        min-height: 38px !important;
+
+        padding: 0 !important;
+
+        display: flex !important;
+
+        align-items: center !important;
+        justify-content: center !important;
+
+        border-radius: 50% !important;
+
+        flex: 0 0 38px !important;
+    }
+
+
+    .map-style-btn span {
+
+        display: none !important;
+    }
+
+
+    .map-style-btn svg {
+
+        width: 16px !important;
+        height: 16px !important;
     }
 
 }
