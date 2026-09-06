@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TravelBuddy Samar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <script src="https://unpkg.com/lucide@0.468.0"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="page">
+    <header class="app-header">
+
+      <!-- LEFT SIDE -->
+      <div class="brand-area">
+
+        <div class="brand-icon">
+          <i data-lucide="compass"></i>
+        </div>
+
+        <div class="brand-copy">
+
+          <h1>
+            TravelBuddy Samar
+          </h1>
+
+          <div class="location">
+
+            <i data-lucide="map-pin"></i>
+
+            <span>
+              Catbalogan City, Samar
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- CENTER SEARCH BAR -->
+      <div class="header-search">
+
+        <div class="search-wrap">
+
+          <i data-lucide="search"></i>
+
+          <input id="searchInput" type="search" placeholder="Search destinations, waterfalls, caves, beaches...">
+
+        </div>
+
+
+        <div class="filter-wrap">
+
+          <button class="filter-btn" id="filterButton" type="button" aria-label="Filter destinations"
+            aria-expanded="false">
+            <i data-lucide="sliders-horizontal"></i>
+
+            <span>
+              Filter
+            </span>
+          </button>
+
+
+          <div class="filter-menu" id="filterMenu" hidden>
+
+            <div class="filter-menu-title">
+              Filter by category
+            </div>
+
+            <button class="filter-option active" data-category="All" type="button">
+              All
+            </button>
+
+            <button class="filter-option" data-category="Beaches" type="button">
+              Beaches
+            </button>
+
+            <button class="filter-option" data-category="Waterfalls" type="button">
+              Waterfalls
+            </button>
+
+            <button class="filter-option" data-category="Caves" type="button">
+              Caves
+            </button>
+
+            <button class="filter-option" data-category="Heritage" type="button">
+              Heritage
+            </button>
+
+            <button class="filter-option" data-category="Nature" type="button">
+              Nature
+            </button>
+
+            <button class="filter-option" data-category="Food" type="button">
+              Food
+            </button>
+
+            <button class="filter-option" data-category="Accommodation" type="button">
+              Accommodation
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- RIGHT SIDE -->
+      <div class="header-actions">
+
+        <button class="notification-btn" aria-label="Notifications">
+
+          <i data-lucide="bell"></i>
+
+          <span class="notification-count">
+            2
+          </span>
+
+        </button>
+
+
+        <button class="avatar-btn" aria-label="Profile">
+          JR
+        </button>
+
+      </div>
+
+    </header>
+
+    <main>
+      <section class="hero-section" id="heroSection">
+        <img
+          src="https://media.gettyimages.com/id/1428263024/photo/the-philippines-island-in-northern-samar.jpg?s=612x612&w=0&k=20&c=Lcw2flqi4rHUfpMdrHv1l_OuowLYtevsIsEYiaFia1Q="
+          alt="Samar island destination" class="hero-image">
+        <div class="hero-overlay"></div>
+        <div class="hero-copy">
+
+          <h2>
+            Explore Samar
+          </h2>
+
+          <p>
+            Discover destinations, local experiences,
+            and nearby places across
+            <br class="desktop-br">
+            Samar.
+          </p>
+
+          <button class="get-started-btn" id="getStartedButton" type="button">
+            Get Started
+          </button>
+
+        </div>
+      </section>
+
+      <section class="featured-section">
+        <div class="section-heading">
+          <h3>Featured destinations</h3>
+          <button class="see-all" id="seeAllButton" type="button">
+            See all
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </div>
+
+        <div class="destination-grid" id="destinationGrid">
+          <article class="destination-card" data-id="sohoton-caves" data-category="Caves"
+            data-name="Sohoton Caves & Natural Bridge">
+            <div class="card-photo">
+              <img
+                src="https://www.journeyera.com/wp-content/uploads/2018/01/sohoton-cove-national-park-socorro-01707.jpg"
+                alt="Sohoton Caves & Natural Bridge">
+
+              <span class="category-badge">
+                Caves
+              </span>
+
+              <div class="card-top-actions">
+
+                <button class="favorite-btn" type="button" aria-label="Save destination">
+                  <i data-lucide="heart"></i>
+                </button>
+
+                <span class="rating-badge">
+                  <span class="star">★</span>
+                  <b>4.8</b>
+                </span>
+
+              </div>
+            </div>
+            <div class="card-body">
+              <h4>Sohoton Caves &amp; Natural Bridge</h4>
+              <p class="place"><i data-lucide="map-pin"></i> Basey, Samar</p>
+              <p class="description">Limestone caverns and a natural rock bridge along the Golden River.</p>
+              <div class="card-footer">
+                <span class="distance"><i data-lucide="navigation"></i> 24.5 km away</span>
+                <button class="details-btn">View Details</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="destination-card" data-id="marabut-marine-park" data-category="Beaches"
+            data-name="Marabut Marine Park">
+            <div class="card-photo">
+              <img
+                src="https://pinaywise.com/wp-content/uploads/2024/02/Marabut-Beach-Park-samar-philippines-1500x500.jpg"
+                alt="Marabut Marine Park">
+
+              <span class="category-badge">
+                Beaches
+              </span>
+
+              <div class="card-top-actions">
+
+                <button class="favorite-btn" type="button" aria-label="Save destination">
+                  <i data-lucide="heart"></i>
+                </button>
+
+                <span class="rating-badge">
+                  <span class="star">★</span>
+                  <b>4.8</b>
+                </span>
+
+              </div>
+            </div>
+            <div class="card-body">
+              <h4>Marabut Marine Park</h4>
+              <p class="place"><i data-lucide="map-pin"></i> Marabut, Samar</p>
+              <p class="description">Rock islets and calm turquoise coves ideal for kayaking.</p>
+              <div class="card-footer">
+                <span class="distance"><i data-lucide="navigation"></i> 38.2 km away</span>
+                <button class="details-btn">View Details</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="destination-card" data-id="pinipisakan-falls" data-category="Waterfalls"
+            data-name="Pinipisakan Falls">
+            <div class="card-photo">
+              <img
+                src="https://d3fphkxyf5o5bm.cloudfront.net/image-resize/format=webp,w=1200/QwRY54Li1HMwD7oNfogO3jiVCuQXBMdnOMA8uD8vHI"
+                alt="Pinipisakan Falls">
+
+              <span class="category-badge">
+                Waterfalls
+              </span>
+
+              <div class="card-top-actions">
+
+                <button class="favorite-btn" type="button" aria-label="Save destination">
+                  <i data-lucide="heart"></i>
+                </button>
+
+                <span class="rating-badge">
+                  <span class="star">★</span>
+                  <b>4.8</b>
+                </span>
+
+              </div>
+            </div>
+            <div class="card-body">
+              <h4>Pinipisakan Falls</h4>
+              <p class="place"><i data-lucide="map-pin"></i> Las Navas, Samar</p>
+              <p class="description">Three-tiered curtain falls deep inside the Samar rainforest.</p>
+              <div class="card-footer">
+                <span class="distance"><i data-lucide="navigation"></i> 96.4 km away</span>
+                <button class="details-btn">View Details</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="destination-card" data-id="ulot-river" data-category="Nature"
+            data-name="Ulot River Torpedo Extreme Ride">
+            <div class="card-photo">
+              <img src="https://easternsamar.gov.ph/wp-content/uploads/2017/11/ride-the-rapids.jpg"
+                alt="Ulot River Torpedo Extreme Ride">
+
+              <span class="category-badge">
+                Rivers
+              </span>
+
+              <div class="card-top-actions">
+
+                <button class="favorite-btn" type="button" aria-label="Save destination">
+                  <i data-lucide="heart"></i>
+                </button>
+
+                <span class="rating-badge">
+                  <span class="star">★</span>
+                  <b>4.8</b>
+                </span>
+
+              </div>
+            </div>
+            <div class="card-body">
+              <h4>Ulot River Torpedo Extreme Ride</h4>
+              <p class="place"><i data-lucide="map-pin"></i> Paranas, Samar</p>
+              <p class="description">Community-run boat ride through rapids in a protected forest.</p>
+              <div class="card-footer">
+                <span class="distance"><i data-lucide="navigation"></i> 61 km away</span>
+                <button class="details-btn">View Details</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="destination-card" data-id="san-juanico-bridge" data-category="Heritage"
+            data-name="San Juanico Bridge">
+            <div class="card-photo">
+              <img src="https://images.gmanews.tv/webpics/2025/04/san_juanico_bridge_2025_04_25_00_27_42.jpg"
+                alt="San Juanico Bridge">
+
+              <span class="category-badge">
+                Heritage
+              </span>
+
+              <div class="card-top-actions">
+
+                <button class="favorite-btn" type="button" aria-label="Save destination">
+                  <i data-lucide="heart"></i>
+                </button>
+
+                <span class="rating-badge">
+                  <span class="star">★</span>
+                  <b>4.8</b>
+                </span>
+
+              </div>
+            </div>
+            <div class="card-body">
+              <h4>San Juanico Bridge</h4>
+              <p class="place"><i data-lucide="map-pin"></i> Santa Rita, Samar</p>
+              <p class="description">The country's longest bridge, arching over San Juanico Strait.</p>
+              <div class="card-footer">
+                <span class="distance"><i data-lucide="navigation"></i> 12.8 km away</span>
+                <button class="details-btn">View Details</button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="saved-section" id="savedSection" hidden>
+
+        <div class="saved-header">
+
+          <div>
+            <p class="saved-eyebrow">
+              Your favorites
+            </p>
+
+            <h2>
+              Saved Places
+            </h2>
+
+            <p>
+              Destinations you saved for later.
+            </p>
+          </div>
+
+          <span class="saved-count" id="savedCount">
+            0 saved
+          </span>
+
+        </div>
+
+
+        <div class="destination-grid" id="savedGrid"></div>
+
+
+        <div class="saved-empty" id="savedEmpty" hidden>
+
+          <div class="saved-empty-icon">
+            <i data-lucide="heart"></i>
+          </div>
+
+          <h3>
+            No saved places yet
+          </h3>
+
+          <p>
+            Tap the heart icon on a destination
+            to save it here.
+          </p>
+
+          <button type="button" id="browseDestinationsButton">
+            Browse Destinations
+          </button>
+
+        </div>
+
+      </section>
+
+      <!-- =========================================
+     MAP PAGE
+========================================= -->
+
+      <section class="map-section" id="mapSection">
+
+        <div class="map-page-header">
+
+          <div>
+
+            <p class="map-eyebrow">
+              Discover Samar
+            </p>
+
+            <h2>
+              Explore the Map
+            </h2>
+
+            <p class="map-subtitle">
+              Tap a marker to preview a destination.
+            </p>
+
+          </div>
+
+          <button class="map-show-all-btn" id="mapShowAllButton" type="button">
+            <i data-lucide="map-pinned"></i>
+            <span>Show all places</span>
+          </button>
+
+        </div>
+
+
+        <div class="map-shell">
+
+          <!-- MAP STYLE SWITCH -->
+          <div class="map-style-switch">
+
+            <button class="map-style-btn active" id="streetMapButton" type="button">
+              <i data-lucide="map"></i>
+              <span>Street</span>
+            </button>
+
+            <button class="map-style-btn" id="satelliteMapButton" type="button">
+              <i data-lucide="satellite"></i>
+              <span>Satellite</span>
+            </button>
+
+          </div>
+
+
+          <div class="travel-map" id="travelMap"></div>
+
+        </div>
+
+
+        <div class="map-footer-hint">
+
+          <i data-lucide="map-pin"></i>
+
+          <span>
+            Select a marker to view destination information.
+          </span>
+
+        </div>
+
+      </section>
+    </main>
+
+    <!-- =========================================
+     DESTINATION DETAILS MODAL
+========================================= -->
+
+    <div class="details-modal" id="detailsModal" hidden>
+
+      <div class="details-modal-backdrop" id="detailsModalBackdrop"></div>
+
+
+      <div class="details-modal-panel">
+
+        <!-- CLOSE BUTTON -->
+        <button class="details-close-btn" id="detailsCloseButton" type="button" aria-label="Close destination details">
+          <i data-lucide="x"></i>
+        </button>
+
+
+        <!-- LEFT: LARGE PHOTO -->
+        <div class="details-photo-side">
+
+          <img id="detailsImage" src="" alt="">
+
+        </div>
+
+
+        <!-- RIGHT: DETAILS -->
+        <div class="details-content-side">
+
+          <div class="details-scroll">
+
+            <!-- PLACE HEADER -->
+
+            <div class="details-place-header">
+
+              <span class="details-category" id="detailsCategory">
+                Category
+              </span>
+
+              <div class="details-rating-display">
+
+                <span class="star">
+                  ★
+                </span>
+
+                <span id="detailsRating">
+                  4.8
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <h2 class="details-title" id="detailsTitle">
+              Destination
+            </h2>
+
+
+            <p class="details-location">
+
+              <i data-lucide="map-pin"></i>
+
+              <span id="detailsLocation">
+                Samar
+              </span>
+
+            </p>
+
+
+            <p class="details-description" id="detailsDescription"></p>
+
+
+            <!-- =================================
+             RATE PLACE
+        ================================== -->
+
+            <section class="details-rate-section">
+
+              <div class="details-section-heading">
+
+                <div>
+
+                  <h3>
+                    Rate this place
+                  </h3>
+
+                  <p>
+                    How was your experience?
+                  </p>
+
+                </div>
+
+
+                <span class="your-rating-text" id="yourRatingText">
+                  Not rated
+                </span>
+
+              </div>
+
+
+              <div class="star-rating" id="starRating" aria-label="Rate destination">
+
+                <button type="button" class="rate-star" data-rating="1" aria-label="1 star">
+                  ★
+                </button>
+
+                <button type="button" class="rate-star" data-rating="2" aria-label="2 stars">
+                  ★
+                </button>
+
+                <button type="button" class="rate-star" data-rating="3" aria-label="3 stars">
+                  ★
+                </button>
+
+                <button type="button" class="rate-star" data-rating="4" aria-label="4 stars">
+                  ★
+                </button>
+
+                <button type="button" class="rate-star" data-rating="5" aria-label="5 stars">
+                  ★
+                </button>
+
+              </div>
+
+            </section>
+
+
+            <!-- =================================
+             COMMENTS
+        ================================== -->
+
+            <section class="details-comments-section">
+
+              <div class="comments-heading">
+
+                <h3>
+                  Comments
+                </h3>
+
+                <span id="commentCount">
+                  0 comments
+                </span>
+
+              </div>
+
+
+              <!-- COMMENT INPUT -->
+
+              <div class="comment-composer">
+
+                <div class="comment-avatar">
+                  JR
+                </div>
+
+
+                <div class="comment-input-wrap">
+
+                  <textarea id="commentInput" rows="1" maxlength="500" placeholder="Write a comment..."></textarea>
+
+
+                  <button type="button" class="comment-submit-btn" id="commentSubmitButton">
+                    <i data-lucide="send"></i>
+
+                    <span>
+                      Post
+                    </span>
+                  </button>
+
+                </div>
+
+              </div>
+
+
+              <!-- COMMENTS APPEAR HERE -->
+
+              <div class="comments-list" id="commentsList"></div>
+
+            </section>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <button class="floating-ai">
+      <i data-lucide="bot"></i>
+      <span>Ask TravelBuddy AI</span>
+    </button>
+
+    <nav class="bottom-nav">
+
+      <!-- HOME -->
+      <button class="nav-item active" id="homeNavButton" type="button">
+        <i data-lucide="house"></i>
+        <span>Home</span>
+      </button>
+
+
+      <!-- EXPLORE -->
+      <button class="nav-item" id="exploreNavButton" type="button">
+        <i data-lucide="compass"></i>
+        <span>Explore</span>
+      </button>
+
+
+      <!-- MAP -->
+      <button class="nav-item map-nav-item" id="mapNavButton" type="button">
+        <span class="map-nav-icon">
+          <i data-lucide="map"></i>
+        </span>
+
+        <span>
+          Map
+        </span>
+      </button>
+
+
+      <!-- SAVED -->
+      <button class="nav-item" id="savedNavButton" type="button">
+        <i data-lucide="heart"></i>
+
+        <span>
+          Saved
+        </span>
+
+        <span class="saved-nav-count" id="savedNavCount" hidden>
+          0
+        </span>
+      </button>
+
+
+      <!-- PROFILE -->
+      <button class="nav-item" type="button">
+        <i data-lucide="user-round"></i>
+
+        <span>
+          Profile
+        </span>
+      </button>
+
+    </nav>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script src="app.js"></script>
+
+</body>
+
+</html>
