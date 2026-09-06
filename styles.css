@@ -4616,3 +4616,244 @@ body.details-modal-open {
     }
 
 }
+
+/* =========================================================
+   GOOGLE AUTHENTICATION
+========================================================= */
+
+.google-auth-section {
+    margin-top: 18px;
+}
+
+
+.google-auth-btn {
+    width: 100%;
+    min-height: 48px;
+
+    padding: 0 16px;
+
+    border: 1px solid #d5e1e7;
+    border-radius: 14px;
+
+    background: #fff;
+
+    color: #18354a;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 10px;
+
+    font-size: 14px;
+    font-weight: 800;
+
+    transition:
+        background .2s ease,
+        border-color .2s ease,
+        transform .2s ease;
+}
+
+
+.google-auth-btn:hover {
+    background: #f7fbfc;
+
+    border-color: #b9cdd7;
+
+    transform: translateY(-1px);
+}
+
+
+.google-auth-logo {
+    width: 25px;
+    height: 25px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 50%;
+
+    background: #fff;
+
+    color: #4285f4;
+
+    font-family: Arial, sans-serif;
+
+    font-size: 18px;
+    font-weight: 900;
+}
+
+
+.auth-divider {
+    margin: 16px 0;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    color: #8093a1;
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+
+.auth-divider::before,
+.auth-divider::after {
+    content: "";
+
+    flex: 1;
+
+    height: 1px;
+
+    background: #dce7ec;
+}
+
+
+.auth-divider span {
+    white-space: nowrap;
+}
+
+
+@media(max-width:430px) {
+
+    .google-auth-btn {
+        min-height: 46px;
+
+        font-size: 13px;
+    }
+
+
+    .auth-divider {
+        gap: 8px;
+
+        font-size: 10px;
+    }
+
+}
+
+/* =========================================================
+   FIREBASE / GOOGLE PROFILE PHOTO
+========================================================= */
+
+.auth-avatar-btn {
+    overflow: hidden;
+}
+
+
+.auth-avatar-photo {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    border-radius: 50%;
+
+    object-fit: cover;
+    object-position: center;
+}
+
+
+/* ACCOUNT MENU PROFILE PHOTO */
+
+.account-menu-avatar {
+    overflow: hidden;
+}
+
+
+.account-menu-photo {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    border-radius: 50%;
+
+    object-fit: cover;
+    object-position: center;
+}
+
+/* =========================================================
+   FULL GOOGLE PROFILE PHOTO
+========================================================= */
+
+.auth-avatar-btn {
+    position: relative;
+
+    width: 52px;
+    height: 52px;
+
+    padding: 0;
+
+    overflow: hidden;
+
+    border-radius: 50%;
+
+    display: grid;
+    place-items: center;
+}
+
+
+/* GOOGLE PROFILE PHOTO */
+
+.auth-avatar-photo {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    margin: 0;
+    padding: 0;
+
+    display: block;
+
+    border-radius: 50%;
+
+    object-fit: cover;
+    object-position: center;
+
+    z-index: 3;
+}
+
+
+/* MAKE SURE HIDDEN ELEMENTS REALLY DISAPPEAR */
+
+.auth-avatar-photo[hidden],
+.auth-avatar-icon[hidden],
+.auth-avatar-initials[hidden] {
+    display: none !important;
+}
+
+
+/* DEFAULT USER ICON */
+
+.auth-avatar-icon {
+    position: relative;
+
+    z-index: 1;
+
+    width: 23px;
+    height: 23px;
+}
+
+
+/* INITIALS */
+
+.auth-avatar-initials {
+    position: relative;
+
+    z-index: 2;
+
+    width: 100%;
+    height: 100%;
+
+    display: grid;
+    place-items: center;
+
+    font-size: 16px;
+    font-weight: 900;
+}

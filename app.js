@@ -1,3 +1,29 @@
+
+import {
+    auth
+} from "./firebase-config.js";
+
+
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    updateProfile,
+    onAuthStateChanged,
+    signOut,
+    setPersistence,
+    browserLocalPersistence,
+    browserSessionPersistence,
+    sendPasswordResetEmail,
+
+    GoogleAuthProvider,
+    signInWithPopup
+
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+
+
+const lucide = window.lucide;
+const L = window.L;
+
 lucide.createIcons();
 
 
@@ -9,6 +35,9 @@ lucide.createIcons();
    AUTH ELEMENTS
 ========================================= */
 
+const authAvatarPhoto = document.getElementById("authAvatarPhoto");
+const accountMenuPhoto = document.getElementById("accountMenuPhoto");
+const accountMenuInitials = document.getElementById("accountMenuInitials");
 const profileNavButton = document.getElementById("profileNavButton");
 const accountProfileButton = document.getElementById("accountProfileButton");
 const authAvatarButton = document.getElementById("authAvatarButton");
@@ -29,8 +58,8 @@ const accountMenuName = document.getElementById("accountMenuName");
 const accountMenuEmail = document.getElementById("accountMenuEmail");
 const accountMenuAvatar = document.getElementById("accountMenuAvatar");
 const logoutButton = document.getElementById("logoutButton");
-const AUTH_USER_KEY = "travelBuddyCurrentUser";
-const AUTH_ACCOUNTS_KEY = "travelBuddyAccounts";
+const googleSignInButton = document.getElementById("googleSignInButton");
+const forgotPasswordButton = document.querySelector(".forgot-password-btn");
 const SAVED_STORAGE_KEY = "travelBuddySavedPlaces";
 const RATINGS_STORAGE_KEY = "travelBuddyPlaceRatings";
 const COMMENTS_STORAGE_KEY = "travelBuddyPlaceComments";
@@ -204,210 +233,530 @@ let satelliteLayer = null;
 
 let activeCategory = "All";
 
-function handleAccountAccess() {
-
-    const user =
-        getCurrentUser();
-
-
-    /*
-      USER IS NOT LOGGED IN
-    */
-
-    if (!user) {
-
-        /*
-          ALWAYS OPEN SIGN IN FIRST
-        */
-
-        showSignIn();
-
-        openAuthModal();
-
-        return;
-
-    }
+/* =========================================================
+   FIREBASE AUTHENTICATION
+========================================================= */
 
 
-    /*
-      USER IS LOGGED IN
-    */
-
-    accountMenu.hidden =
-        !accountMenu.hidden;
-
-}
+/* =========================================
+   CURRENT USER
+========================================= */
 
 function getCurrentUser() {
 
-    try {
-
-        return JSON.parse(
-            localStorage.getItem(
-                AUTH_USER_KEY
-            )
-        );
-
-    } catch {
-
-        return null;
-
-    }
+    return auth.currentUser;
 
 }
 
 
-function saveCurrentUser(user) {
+/* =========================================
+   USER INITIALS
+========================================= */
 
-    localStorage.setItem(
-        AUTH_USER_KEY,
-        JSON.stringify(user)
-    );
-
-}
-
-
-function getAccounts() {
-
-    try {
-
-        const accounts =
-            JSON.parse(
-                localStorage.getItem(
-                    AUTH_ACCOUNTS_KEY
-                )
-            );
-
-        return Array.isArray(accounts)
-            ? accounts
-            : [];
-
-    } catch {
-
-        return [];
-
-    }
-
-}
-
-
-function saveAccounts(accounts) {
-
-    localStorage.setItem(
-        AUTH_ACCOUNTS_KEY,
-        JSON.stringify(accounts)
-    );
-
-}
-
-function getUserInitials(user) {
+function getUserInitials(
+    user
+) {
 
     if (!user) {
-        return "";
+
+        return "U";
+
     }
 
 
-    const first =
-        user.firstName
+    const fullName =
+        user.displayName
             ?.trim()
-            .charAt(0)
-            .toUpperCase()
         || "";
 
 
-    const last =
-        user.lastName
-            ?.trim()
-            .charAt(0)
+    if (fullName) {
+
+        const parts =
+            fullName.split(/\s+/);
+
+
+        const first =
+            parts[0]
+                ?.charAt(0)
+                .toUpperCase()
+            || "";
+
+
+        const last =
+            parts.length > 1
+                ?
+                parts[
+                    parts.length - 1
+                ]
+                    ?.charAt(0)
+                    .toUpperCase()
+                :
+                "";
+
+
+        return (
+            first + last
+        ) || "U";
+
+    }
+
+
+    return (
+        user.email
+            ?.charAt(0)
             .toUpperCase()
-        || "";
-
-
-    return `${first}${last}` || "U";
+        ||
+        "U"
+    );
 
 }
 
-function updateAuthUI() {
 
-    const user =
-        getCurrentUser();
+/* =========================================
+   UPDATE ACCOUNT UI
+========================================= */
 
+/* =========================================================
+   UPDATE AUTH UI
+========================================================= */
+
+function updateAuthUI(
+    user
+) {
+
+    /* =========================================
+       LOGGED OUT
+    ========================================= */
 
     if (!user) {
 
         authAvatarIcon.hidden =
             false;
 
+
         authAvatarInitials.hidden =
             true;
 
+
+        authAvatarPhoto.hidden =
+            true;
+
+
+        authAvatarPhoto.src =
+            "";
+
+
         accountMenu.hidden =
             true;
+
 
         return;
 
     }
 
 
+    /* =========================================
+       LOGGED IN
+    ========================================= */
+
     const initials =
-        getUserInitials(user);
+        getUserInitials(
+            user
+        );
 
 
-    authAvatarIcon.hidden =
-        true;
-
-    authAvatarInitials.hidden =
-        false;
-
-    authAvatarInitials.textContent =
-        initials;
+    const profilePhoto =
+        user.photoURL
+        ||
+        "";
 
 
-    accountMenuAvatar.textContent =
-        initials;
+    /* =========================================
+       USER HAS GOOGLE PROFILE PHOTO
+    ========================================= */
 
+    if (profilePhoto) {
+
+        /*
+          TOP HEADER PHOTO
+        */
+
+        authAvatarIcon.hidden =
+            true;
+
+
+        authAvatarInitials.hidden =
+            true;
+
+
+        authAvatarPhoto.src =
+            profilePhoto;
+
+
+        authAvatarPhoto.hidden =
+            false;
+
+
+        /*
+          ACCOUNT MENU PHOTO
+        */
+
+        accountMenuInitials.hidden =
+            true;
+
+
+        accountMenuPhoto.src =
+            profilePhoto;
+
+
+        accountMenuPhoto.hidden =
+            false;
+
+    }
+
+
+    /* =========================================
+       NO PROFILE PHOTO
+       USE INITIALS
+    ========================================= */
+
+    else {
+
+        /*
+          HEADER
+        */
+
+        authAvatarIcon.hidden =
+            true;
+
+
+        authAvatarPhoto.hidden =
+            true;
+
+
+        authAvatarPhoto.src =
+            "";
+
+
+        authAvatarInitials.hidden =
+            false;
+
+
+        authAvatarInitials.textContent =
+            initials;
+
+
+        /*
+          ACCOUNT MENU
+        */
+
+        accountMenuPhoto.hidden =
+            true;
+
+
+        accountMenuPhoto.src =
+            "";
+
+
+        accountMenuInitials.hidden =
+            false;
+
+
+        accountMenuInitials.textContent =
+            initials;
+
+    }
+
+
+    /* =========================================
+       ACCOUNT INFORMATION
+    ========================================= */
 
     accountMenuName.textContent =
-        `${user.firstName} ${user.lastName}`;
+        user.displayName
+        ||
+        "Traveler";
 
 
     accountMenuEmail.textContent =
-        user.email;
+        user.email
+        ||
+        "";
 
 }
 
+
+/* =========================================
+   ACCOUNT ACCESS
+========================================= */
+
+function handleAccountAccess() {
+
+    const user =
+        getCurrentUser();
+
+
+    if (!user) {
+
+        accountMenu.hidden =
+            true;
+
+
+        showSignIn();
+
+
+        openAuthModal();
+
+
+        return;
+
+    }
+
+
+    accountMenu.hidden =
+        !accountMenu.hidden;
+
+}
+
+
+/* =========================================
+   OPEN AUTH MODAL
+========================================= */
+
 function openAuthModal() {
+
+    if (!authModal) {
+
+        return;
+
+    }
+
 
     authModal.hidden =
         false;
+
 
     accountMenu.hidden =
         true;
 
+
     document.body.style.overflow =
         "hidden";
+
+
+    if (
+        typeof lucide !==
+        "undefined"
+    ) {
+
+        lucide.createIcons();
+
+    }
 
 }
 
 
+/* =========================================
+   CLOSE AUTH MODAL
+========================================= */
+
 function closeAuthModal() {
+
+    if (!authModal) {
+
+        return;
+
+    }
+
 
     authModal.hidden =
         true;
 
-    authMessage.hidden =
-        true;
+
+    if (authMessage) {
+
+        authMessage.hidden =
+            true;
+
+
+        authMessage.classList.remove(
+            "error"
+        );
+
+    }
+
 
     document.body.style.overflow =
         "";
 
 }
 
+
+/* =========================================
+   AUTH MESSAGE
+========================================= */
+
+function showAuthMessage(
+    message,
+    isError = false
+) {
+
+    if (!authMessage) {
+
+        return;
+
+    }
+
+
+    authMessage.hidden =
+        false;
+
+
+    authMessage.textContent =
+        message;
+
+
+    authMessage.classList.toggle(
+        "error",
+        isError
+    );
+
+}
+
+
+/* =========================================
+   FIREBASE ERROR HANDLER
+========================================= */
+
+function handleFirebaseAuthError(
+    error
+) {
+
+    console.error(
+        "Firebase Authentication Error:",
+        error
+    );
+
+
+    let message =
+        "Something went wrong. Please try again.";
+
+
+    switch (
+    error.code
+    ) {
+
+        case "auth/email-already-in-use":
+
+            message =
+                "An account with this email already exists.";
+
+            break;
+
+
+        case "auth/invalid-email":
+
+            message =
+                "Please enter a valid email address.";
+
+            break;
+
+
+        case "auth/weak-password":
+
+            message =
+                "Please use a stronger password.";
+
+            break;
+
+
+        case "auth/invalid-credential":
+
+            message =
+                "Incorrect email or password.";
+
+            break;
+
+
+        case "auth/missing-password":
+
+            message =
+                "Please enter your password.";
+
+            break;
+
+
+        case "auth/popup-closed-by-user":
+
+            message =
+                "Google sign-in was cancelled.";
+
+            break;
+
+
+        case "auth/popup-blocked":
+
+            message =
+                "Your browser blocked the Google login popup.";
+
+            break;
+
+
+        case "auth/account-exists-with-different-credential":
+
+            message =
+                "An account already exists with this email using another login method.";
+
+            break;
+
+
+        case "auth/too-many-requests":
+
+            message =
+                "Too many attempts. Please try again later.";
+
+            break;
+
+
+        case "auth/network-request-failed":
+
+            message =
+                "Network error. Check your internet connection.";
+
+            break;
+
+
+        case "auth/operation-not-allowed":
+
+            message =
+                "This login method is not enabled in Firebase.";
+
+            break;
+
+    }
+
+
+    showAuthMessage(
+        message,
+        true
+    );
+
+}
+
+
+/* =========================================================
+   HEADER ACCOUNT BUTTON
+========================================================= */
+
 authAvatarButton?.addEventListener(
     "click",
     event => {
 
+        event.preventDefault();
+
         event.stopPropagation();
+
 
         handleAccountAccess();
 
@@ -415,97 +764,132 @@ authAvatarButton?.addEventListener(
 );
 
 
-/* =========================================
+/* =========================================================
    PROFILE NAVIGATION
-========================================= */
+========================================================= */
 
 profileNavButton?.addEventListener(
     "click",
     event => {
 
+        event.preventDefault();
+
         event.stopPropagation();
 
 
-        const user =
-            getCurrentUser();
-
-
-        /*
-          NOT LOGGED IN
-          ↓
-          OPEN SIGN IN / SIGN UP
-        */
-
-        if (!user) {
-
-            showSignIn();
-
-            openAuthModal();
-
-            return;
-
-        }
-
-
-        /*
-          ALREADY LOGGED IN
-          ↓
-          OPEN ACCOUNT MENU
-        */
-
-        accountMenu.hidden =
-            !accountMenu.hidden;
+        handleAccountAccess();
 
     }
 );
 
+
+/* =========================================================
+   ACCOUNT MENU PROFILE BUTTON
+========================================================= */
+
+accountProfileButton?.addEventListener(
+    "click",
+    event => {
+
+        event.preventDefault();
+
+        event.stopPropagation();
+
+
+        accountMenu.hidden =
+            true;
+
+    }
+);
+
+
+/* =========================================================
+   SHOW SIGN IN
+========================================================= */
+
 function showSignIn() {
 
-    signInTab.classList.add(
-        "active"
-    );
-
-    signUpTab.classList.remove(
+    signInTab?.classList.add(
         "active"
     );
 
 
-    signInForm.hidden =
-        false;
-
-    signUpForm.hidden =
-        true;
+    signUpTab?.classList.remove(
+        "active"
+    );
 
 
-    authMessage.hidden =
-        true;
+    if (signInForm) {
+
+        signInForm.hidden =
+            false;
+
+    }
+
+
+    if (signUpForm) {
+
+        signUpForm.hidden =
+            true;
+
+    }
+
+
+    if (authMessage) {
+
+        authMessage.hidden =
+            true;
+
+    }
 
 }
 
+
+/* =========================================================
+   SHOW SIGN UP
+========================================================= */
 
 function showSignUp() {
 
-    signUpTab.classList.add(
-        "active"
-    );
-
-    signInTab.classList.remove(
+    signUpTab?.classList.add(
         "active"
     );
 
 
-    signUpForm.hidden =
-        false;
-
-    signInForm.hidden =
-        true;
+    signInTab?.classList.remove(
+        "active"
+    );
 
 
-    authMessage.hidden =
-        true;
+    if (signUpForm) {
+
+        signUpForm.hidden =
+            false;
+
+    }
+
+
+    if (signInForm) {
+
+        signInForm.hidden =
+            true;
+
+    }
+
+
+    if (authMessage) {
+
+        authMessage.hidden =
+            true;
+
+    }
 
 }
 
+
+/* =========================================================
+   AUTH TABS
+========================================================= */
 
 signInTab?.addEventListener(
     "click",
@@ -530,9 +914,15 @@ openSignInButton?.addEventListener(
     showSignIn
 );
 
+
+/* =========================================================
+   EMAIL/PASSWORD SIGN UP
+========================================================= */
+
 signUpForm?.addEventListener(
     "submit",
-    event => {
+
+    async event => {
 
         event.preventDefault();
 
@@ -586,95 +976,89 @@ signUpForm?.addEventListener(
             confirmPassword
         ) {
 
-            authMessage.hidden =
-                false;
-
-            authMessage.classList.add(
-                "error"
+            showAuthMessage(
+                "Passwords do not match.",
+                true
             );
 
-            authMessage.textContent =
-                "Passwords do not match.";
 
             return;
 
         }
 
 
-        const accounts =
-            getAccounts();
+        try {
 
-
-        const accountExists =
-            accounts.some(
-                account =>
-                    account.email === email
+            showAuthMessage(
+                "Creating your account..."
             );
 
 
-        if (accountExists) {
+            /*
+              CREATE FIREBASE ACCOUNT
+            */
 
-            authMessage.hidden =
-                false;
+            const userCredential =
+                await createUserWithEmailAndPassword(
+                    auth,
+                    email,
+                    password
+                );
 
-            authMessage.classList.add(
-                "error"
+
+            /*
+              SAVE FIRST + LAST NAME
+            */
+
+            await updateProfile(
+                userCredential.user,
+                {
+
+                    displayName:
+                        `${firstName} ${lastName}`.trim()
+
+                }
             );
 
-            authMessage.textContent =
-                "An account with this email already exists.";
 
-            return;
+            /*
+              FORCE AUTH USER RELOAD
+              INTO UI
+            */
+
+            updateAuthUI(
+                userCredential.user
+            );
+
+
+            signUpForm.reset();
+
+
+            closeAuthModal();
+
+
+        } catch (
+        error
+        ) {
+
+            handleFirebaseAuthError(
+                error
+            );
 
         }
-
-
-        const newAccount = {
-
-            firstName,
-            lastName,
-            email,
-            password
-
-        };
-
-
-        accounts.push(
-            newAccount
-        );
-
-
-        saveAccounts(
-            accounts
-        );
-
-
-        saveCurrentUser({
-
-            firstName,
-            lastName,
-            email
-
-        });
-
-
-        authMessage.classList.remove(
-            "error"
-        );
-
-
-        updateAuthUI();
-
-        closeAuthModal();
-
-        signUpForm.reset();
 
     }
 );
 
+
+/* =========================================================
+   EMAIL/PASSWORD SIGN IN
+========================================================= */
+
 signInForm?.addEventListener(
     "submit",
-    event => {
+
+    async event => {
 
         event.preventDefault();
 
@@ -697,76 +1081,249 @@ signInForm?.addEventListener(
                 .value;
 
 
-        const accounts =
-            getAccounts();
+        const rememberMe =
+            document
+                .getElementById(
+                    "rememberMe"
+                )
+                ?.checked
+            ??
+            false;
 
 
-        const account =
-            accounts.find(
-                item =>
-                    item.email === email
-                    &&
-                    item.password === password
+        try {
+
+            showAuthMessage(
+                "Signing in..."
             );
 
 
-        if (!account) {
+            /*
+              REMEMBER ME
+            */
 
-            authMessage.hidden =
-                false;
+            await setPersistence(
 
-            authMessage.classList.add(
-                "error"
+                auth,
+
+                rememberMe
+                    ?
+                    browserLocalPersistence
+                    :
+                    browserSessionPersistence
+
             );
 
-            authMessage.textContent =
-                "Incorrect email or password.";
+
+            /*
+              SIGN IN
+            */
+
+            await signInWithEmailAndPassword(
+                auth,
+                email,
+                password
+            );
+
+
+            signInForm.reset();
+
+
+            closeAuthModal();
+
+
+        } catch (
+        error
+        ) {
+
+            handleFirebaseAuthError(
+                error
+            );
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   GOOGLE / GMAIL SIGN IN
+========================================================= */
+
+const googleProvider =
+    new GoogleAuthProvider();
+
+
+googleProvider.setCustomParameters({
+
+    prompt:
+        "select_account"
+
+});
+
+
+googleSignInButton?.addEventListener(
+    "click",
+
+    async () => {
+
+        try {
+
+            showAuthMessage(
+                "Opening Google sign-in..."
+            );
+
+
+            /*
+              GOOGLE LOGIN SHOULD
+              REMAIN LOGGED IN
+            */
+
+            await setPersistence(
+                auth,
+                browserLocalPersistence
+            );
+
+
+            /*
+              OPEN GOOGLE ACCOUNT PICKER
+            */
+
+            const result =
+                await signInWithPopup(
+                    auth,
+                    googleProvider
+                );
+
+
+            console.log(
+                "Google account:",
+                result.user.email
+            );
+
+
+            closeAuthModal();
+
+
+        } catch (
+        error
+        ) {
+
+            handleFirebaseAuthError(
+                error
+            );
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   FORGOT PASSWORD
+========================================================= */
+
+forgotPasswordButton?.addEventListener(
+    "click",
+
+    async () => {
+
+        const emailInput =
+            document.getElementById(
+                "signInEmail"
+            );
+
+
+        const email =
+            emailInput
+                ?.value
+                .trim()
+                .toLowerCase()
+            ||
+            "";
+
+
+        if (!email) {
+
+            showAuthMessage(
+                "Enter your email address first.",
+                true
+            );
+
+
+            emailInput?.focus();
+
 
             return;
 
         }
 
 
-        saveCurrentUser({
+        try {
 
-            firstName:
-                account.firstName,
-
-            lastName:
-                account.lastName,
-
-            email:
-                account.email
-
-        });
+            await sendPasswordResetEmail(
+                auth,
+                email
+            );
 
 
-        updateAuthUI();
+            showAuthMessage(
+                "Password reset email sent. Check your inbox."
+            );
 
-        closeAuthModal();
 
-        signInForm.reset();
+        } catch (
+        error
+        ) {
+
+            handleFirebaseAuthError(
+                error
+            );
+
+        }
 
     }
 );
+
+
+/* =========================================================
+   LOG OUT
+========================================================= */
 
 logoutButton?.addEventListener(
     "click",
-    () => {
 
-        localStorage.removeItem(
-            AUTH_USER_KEY
-        );
+    async () => {
+
+        try {
+
+            await signOut(
+                auth
+            );
 
 
-        accountMenu.hidden =
-            true;
+            accountMenu.hidden =
+                true;
 
 
-        updateAuthUI();
+        } catch (
+        error
+        ) {
+
+            console.error(
+                "Firebase logout error:",
+                error
+            );
+
+        }
 
     }
 );
+
+
+/* =========================================================
+   CLOSE AUTH MODAL
+========================================================= */
 
 authCloseButton?.addEventListener(
     "click",
@@ -778,6 +1335,11 @@ authBackdrop?.addEventListener(
     "click",
     closeAuthModal
 );
+
+
+/* =========================================================
+   CLOSE ACCOUNT MENU WHEN CLICKING OUTSIDE
+========================================================= */
 
 document.addEventListener(
     "click",
@@ -791,10 +1353,132 @@ document.addEventListener(
             !authAvatarButton?.contains(
                 event.target
             )
+            &&
+            !profileNavButton?.contains(
+                event.target
+            )
         ) {
 
             accountMenu.hidden =
                 true;
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   SHOW / HIDE PASSWORD
+========================================================= */
+
+document
+    .querySelectorAll(
+        ".auth-password-toggle"
+    )
+    .forEach(
+        button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    const targetId =
+                        button.dataset
+                            .passwordTarget;
+
+
+                    const input =
+                        document.getElementById(
+                            targetId
+                        );
+
+
+                    if (!input) {
+
+                        return;
+
+                    }
+
+
+                    const showingPassword =
+                        input.type ===
+                        "text";
+
+
+                    input.type =
+                        showingPassword
+                            ?
+                            "password"
+                            :
+                            "text";
+
+
+                    button.setAttribute(
+                        "aria-label",
+                        showingPassword
+                            ?
+                            "Show password"
+                            :
+                            "Hide password"
+                    );
+
+                }
+            );
+
+        }
+    );
+
+
+/* =========================================================
+   REAL-TIME FIREBASE AUTH STATE
+========================================================= */
+
+onAuthStateChanged(
+    auth,
+
+    user => {
+
+        /*
+          THIS RUNS WHEN:
+          - PAGE LOADS
+          - USER SIGNS IN
+          - GOOGLE LOGIN SUCCEEDS
+          - ACCOUNT IS CREATED
+          - USER LOGS OUT
+        */
+
+        updateAuthUI(
+            user
+        );
+
+
+        if (user) {
+
+            console.log(
+                "Firebase user logged in:",
+                {
+                    uid:
+                        user.uid,
+
+                    name:
+                        user.displayName,
+
+                    email:
+                        user.email,
+
+                    provider:
+                        user.providerData[
+                            0
+                        ]?.providerId
+                }
+            );
+
+        } else {
+
+            console.log(
+                "No Firebase user logged in."
+            );
 
         }
 
@@ -2701,7 +3385,6 @@ document.addEventListener(
 );
 
 updateFavoriteButtons();
-updateAuthUI();
 updateSavedCount();
 
 /* =========================================
