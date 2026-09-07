@@ -258,6 +258,9 @@ const destinationGrid =
 let realtimeDestinations =
     [];
 
+let realtimeDestinationsLoaded =
+    false;
+
 
 /* =========================================================
    ESCAPE HTML
@@ -789,10 +792,8 @@ function startRealtimeDestinationListener() {
                         })
                     );
 
-
-            /* =========================================
-               NEWEST DESTINATION FIRST
-            ========================================= */
+            realtimeDestinationsLoaded =
+                true;
 
             realtimeDestinations.sort(
                 (
@@ -3801,26 +3802,102 @@ function saveSavedPlaces(savedPlaces) {
 
 }
 
+/* =========================================================
+   UPDATE SAVED COUNT
+   REMOVE OLD / INVALID SAVED DESTINATIONS
+========================================================= */
+
 function updateSavedCount() {
 
-    const savedPlaces =
+    let savedPlaces =
         getSavedPlaces();
+
+
+    /* =====================================================
+       ONLY CLEAN AFTER FIRESTORE HAS FINISHED LOADING
+    ===================================================== */
+
+    if (
+        realtimeDestinationsLoaded
+    ) {
+
+        const validDestinationIds =
+            new Set(
+
+                realtimeDestinations.map(
+                    destination =>
+                        destination.id
+                )
+
+            );
+
+
+        const cleanedSavedPlaces =
+            savedPlaces.filter(
+                placeId =>
+                    validDestinationIds.has(
+                        placeId
+                    )
+            );
+
+
+        /* =============================================
+           OLD STATIC IDs FOUND
+           SAVE THE CLEAN VERSION
+        ============================================= */
+
+        if (
+            cleanedSavedPlaces.length !==
+            savedPlaces.length
+        ) {
+
+            saveSavedPlaces(
+                cleanedSavedPlaces
+            );
+
+        }
+
+
+        savedPlaces =
+            cleanedSavedPlaces;
+
+    }
 
 
     const total =
         savedPlaces.length;
 
 
-    savedCount.textContent =
-        `${total} saved`;
+    /* =====================================================
+       SAVED PAGE HEADER
+    ===================================================== */
+
+    if (
+        savedCount
+    ) {
+
+        savedCount.textContent =
+            `${total} saved`;
+
+    }
 
 
-    savedNavCount.textContent =
-        total;
+    /* =====================================================
+       BOTTOM NAV BADGE
+    ===================================================== */
+
+    if (
+        savedNavCount
+    ) {
+
+        savedNavCount.textContent =
+            total;
 
 
-    savedNavCount.hidden =
-        total === 0;
+        savedNavCount.hidden =
+            total === 0;
+
+    }
 
 }
 
@@ -3998,8 +4075,43 @@ document.addEventListener(
 
 function renderSavedPlaces() {
 
-    const savedPlaces =
+    let savedPlaces =
         getSavedPlaces();
+
+
+    /* =====================================================
+       REMOVE IDS THAT NO LONGER EXIST
+    ===================================================== */
+
+    if (
+        realtimeDestinationsLoaded
+    ) {
+
+        const validIds =
+            new Set(
+
+                realtimeDestinations.map(
+                    destination =>
+                        destination.id
+                )
+
+            );
+
+
+        savedPlaces =
+            savedPlaces.filter(
+                placeId =>
+                    validIds.has(
+                        placeId
+                    )
+            );
+
+
+        saveSavedPlaces(
+            savedPlaces
+        );
+
+    }
 
 
     savedGrid.innerHTML =
@@ -4043,32 +4155,36 @@ function renderSavedPlaces() {
     );
 
 
-    /* =========================================
-       SHOW EMPTY MESSAGE
-    ========================================= */
+    /* =====================================================
+       EMPTY STATE
+    ===================================================== */
+
+    const actuallyDisplayed =
+        savedGrid.children.length;
+
 
     savedEmpty.hidden =
-        savedGrid.children.length !==
+        actuallyDisplayed !==
         0;
 
 
-    /* =========================================
-       UPDATE SAVED COUNTS
-    ========================================= */
+    /* =====================================================
+       COUNTERS
+    ===================================================== */
 
     updateSavedCount();
 
 
-    /* =========================================
-       RESTORE HEART STATES
-    ========================================= */
+    /* =====================================================
+       FAVORITE STATES
+    ===================================================== */
 
     updateFavoriteButtons();
 
 
-    /* =========================================
-       RESTORE LUCIDE ICONS
-    ========================================= */
+    /* =====================================================
+       ICONS
+    ===================================================== */
 
     if (
         window.lucide
@@ -4079,6 +4195,8 @@ function renderSavedPlaces() {
     }
 
 }
+
+
 savedNavButton?.addEventListener(
     "click",
     () => {
