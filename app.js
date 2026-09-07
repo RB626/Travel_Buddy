@@ -1,6 +1,6 @@
 
 import { auth, db } from "./firebase-config.js";
-import { collection, query, where, onSnapshot, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { collection, query, where, onSnapshot, doc, setDoc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import {
     createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut,
     setPersistence,
@@ -19,6 +19,11 @@ const lucide = window.lucide;
 lucide.createIcons();
 
 
+const travelerNotificationButton = document.getElementById("travelerNotificationButton");
+const travelerNotificationCount = document.getElementById("travelerNotificationCount");
+const travelerNotificationPanel = document.getElementById("travelerNotificationPanel");
+const travelerNotificationList = document.getElementById("travelerNotificationList");
+const markTravelerNotificationsRead = document.getElementById("markTravelerNotificationsRead");
 const travelBuddyAiButton = document.getElementById("travelBuddyAiButton");
 const aiChat = document.getElementById("aiChat");
 const aiChatCloseButton = document.getElementById("aiChatCloseButton");
@@ -224,6 +229,22 @@ let activeComments =
     [];
 
 
+let travelerNotifications =
+    [];
+
+
+let travelerReadNotificationIds =
+    new Set();
+
+
+let travelerNotificationsUnsubscribe =
+    null;
+
+
+let travelerNotificationReadsUnsubscribe =
+    null;
+
+
 let activeCommentsUnsubscribe =
     null;
 
@@ -277,41 +298,1597 @@ function escapeHTML(
 
 }
 
-
 /* =========================================================
-   DISTANCE FROM CATBALOGAN
+   REALTIME TRAVELER NOTIFICATIONS
 ========================================================= */
 
-function calculateDistanceFromCatbalogan(
-    lat,
-    lng
+
+/* =========================================================
+   CONVERT FIRESTORE TIMESTAMP
+========================================================= */
+
+function notificationTimestampToMillis(
+    timestamp
 ) {
 
-    const startLat =
-        11.7753;
+    if (
+        timestamp
+        &&
+        typeof timestamp.toMillis ===
+        "function"
+    ) {
 
-    const startLng =
-        124.8861;
+        return timestamp.toMillis();
+
+    }
 
 
-    const destinationLat =
-        Number(
-            lat
+    if (
+        timestamp
+        &&
+        typeof timestamp.toDate ===
+        "function"
+    ) {
+
+        return timestamp
+            .toDate()
+            .getTime();
+
+    }
+
+
+    return 0;
+
+}
+
+
+/* =========================================================
+   RELATIVE TIME
+========================================================= */
+
+function formatTravelerNotificationTime(
+    timestamp
+) {
+
+    const time =
+        notificationTimestampToMillis(
+            timestamp
         );
 
-    const destinationLng =
+
+    if (
+        !time
+    ) {
+
+        return "Just now";
+
+    }
+
+
+    const seconds =
+        Math.max(
+            0,
+            Math.floor(
+                (
+                    Date.now() -
+                    time
+                )
+                /
+                1000
+            )
+        );
+
+
+    if (
+        seconds <
+        60
+    ) {
+
+        return "Just now";
+
+    }
+
+
+    const minutes =
+        Math.floor(
+            seconds /
+            60
+        );
+
+
+    if (
+        minutes <
+        60
+    ) {
+
+        return `${minutes}m ago`;
+
+    }
+
+
+    const hours =
+        Math.floor(
+            minutes /
+            60
+        );
+
+
+    if (
+        hours <
+        24
+    ) {
+
+        return `${hours}h ago`;
+
+    }
+
+
+    const days =
+        Math.floor(
+            hours /
+            24
+        );
+
+
+    if (
+        days <
+        7
+    ) {
+
+        return `${days}d ago`;
+
+    }
+
+
+    return new Date(
+        time
+    )
+        .toLocaleDateString(
+            "en-US",
+            {
+                month:
+                    "short",
+
+                day:
+                    "numeric",
+
+                year:
+                    "numeric"
+            }
+        );
+
+}
+
+
+/* =========================================================
+   CREATE PERSONAL NOTIFICATION
+========================================================= */
+
+async function recordTravelerNotification({
+    type,
+    destinationId,
+    destinationName,
+    commentText = ""
+}) {
+
+    const user =
+        auth.currentUser;
+
+
+    if (
+        !user
+        ||
+        !destinationId
+    ) {
+
+        return;
+
+    }
+
+
+    await addDoc(
+
+        collection(
+            db,
+            "travelerNotifications"
+        ),
+
+        {
+
+            userId:
+                user.uid,
+
+            type:
+                type,
+
+            destinationId:
+                destinationId,
+
+            destinationName:
+                destinationName
+                ||
+                "Destination",
+
+            commentText:
+                commentText,
+
+            unread:
+                true,
+
+            createdAt:
+                serverTimestamp()
+
+        }
+
+    );
+
+}
+
+
+/* =========================================================
+   NEW PLACES FROM REALTIME DESTINATIONS
+
+   These are GLOBAL notifications.
+   No extra DOT collection is required.
+========================================================= */
+
+function getNewPlaceNotifications() {
+
+    /*
+       Only use fairly recent destinations so an old
+       database does not fill the notification panel.
+    */
+
+    const notificationWindow =
+        14 *
+        24 *
+        60 *
+        60 *
+        1000;
+
+
+    const now =
+        Date.now();
+
+
+    return realtimeDestinations
+        .map(
+            destination => {
+
+                const notificationId =
+                    `new_place_${destination.id}`;
+
+
+                const createdAt =
+                    destination.publishedAt
+                    ||
+                    destination.createdAt
+                    ||
+                    destination.updatedAt
+                    ||
+                    null;
+
+
+                const timestamp =
+                    notificationTimestampToMillis(
+                        createdAt
+                    );
+
+
+                return {
+
+                    id:
+                        notificationId,
+
+                    source:
+                        "global",
+
+                    type:
+                        "new_place",
+
+                    destinationId:
+                        destination.id,
+
+                    destinationName:
+                        destination.name
+                        ||
+                        "New destination",
+
+                    createdAt:
+                        createdAt,
+
+                    timestamp:
+                        timestamp,
+
+                    unread:
+                        !travelerReadNotificationIds
+                            .has(
+                                notificationId
+                            )
+
+                };
+
+            }
+        )
+        .filter(
+            notification => {
+
+                /*
+                   Keep timestamp-less records as well.
+                   Otherwise keep only recent places.
+                */
+
+                if (
+                    !notification.timestamp
+                ) {
+
+                    return true;
+
+                }
+
+
+                return (
+                    now -
+                    notification.timestamp
+                ) <=
+                    notificationWindow;
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   COMBINE PERSONAL + NEW PLACE NOTIFICATIONS
+========================================================= */
+
+function getCombinedTravelerNotifications() {
+
+    const personal =
+        travelerNotifications
+            .map(
+                notification => ({
+
+                    ...notification,
+
+                    source:
+                        "personal",
+
+                    timestamp:
+                        notificationTimestampToMillis(
+                            notification.createdAt
+                        )
+
+                })
+            );
+
+
+    const newPlaces =
+        getNewPlaceNotifications();
+
+
+    return [
+        ...personal,
+        ...newPlaces
+    ]
+        .sort(
+            (
+                first,
+                second
+            ) => {
+
+                return (
+                    second.timestamp -
+                    first.timestamp
+                );
+
+            }
+        )
+        .slice(
+            0,
+            20
+        );
+
+}
+
+
+/* =========================================================
+   NOTIFICATION MESSAGE
+========================================================= */
+
+function getTravelerNotificationMessage(
+    notification
+) {
+
+    const destinationName =
+        escapeHTML(
+            notification.destinationName
+            ||
+            "destination"
+        );
+
+
+    switch (
+    notification.type
+    ) {
+
+        case "saved":
+
+            return `
+                You saved
+                <strong>${destinationName}</strong>.
+            `;
+
+
+        case "comment":
+
+            return `
+                You commented on
+                <strong>${destinationName}</strong>.
+            `;
+
+
+        case "new_place":
+
+            return `
+                New destination posted:
+                <strong>${destinationName}</strong>.
+            `;
+
+
+        default:
+
+            return `
+                Activity on
+                <strong>${destinationName}</strong>.
+            `;
+
+    }
+
+}
+
+
+/* =========================================================
+   NOTIFICATION ICON
+========================================================= */
+
+function getTravelerNotificationIcon(
+    type
+) {
+
+    switch (
+    type
+    ) {
+
+        case "saved":
+
+            return "heart";
+
+
+        case "comment":
+
+            return "message-circle";
+
+
+        case "new_place":
+
+            return "map-pin-plus";
+
+
+        default:
+
+            return "bell";
+
+    }
+
+}
+
+
+/* =========================================================
+   RENDER NOTIFICATIONS
+========================================================= */
+
+function renderTravelerNotifications() {
+
+    if (
+        !travelerNotificationList
+        ||
+        !travelerNotificationCount
+    ) {
+
+        return;
+
+    }
+
+
+    const user =
+        auth.currentUser;
+
+
+    /* =====================================================
+       LOGGED OUT
+    ===================================================== */
+
+    if (
+        !user
+    ) {
+
+        travelerNotificationCount.hidden =
+            true;
+
+
+        travelerNotificationCount.textContent =
+            "0";
+
+
+        travelerNotificationList.innerHTML = `
+
+            <div class="traveler-notification-empty">
+
+                <i data-lucide="bell-off"></i>
+
+                <p>
+                    Sign in to view your notifications.
+                </p>
+
+            </div>
+
+        `;
+
+
+        window.lucide
+            ?.createIcons();
+
+
+        return;
+
+    }
+
+
+    const notifications =
+        getCombinedTravelerNotifications();
+
+
+    const unreadCount =
+        notifications.filter(
+            notification =>
+                notification.unread ===
+                true
+        ).length;
+
+
+    travelerNotificationCount.textContent =
+        unreadCount >
+            99
+
+            ?
+
+            "99+"
+
+            :
+
+            unreadCount;
+
+
+    travelerNotificationCount.hidden =
+        unreadCount ===
+        0;
+
+
+    /* =====================================================
+       EMPTY
+    ===================================================== */
+
+    if (
+        notifications.length ===
+        0
+    ) {
+
+        travelerNotificationList.innerHTML = `
+
+            <div class="traveler-notification-empty">
+
+                <i data-lucide="bell"></i>
+
+                <p>
+                    No notifications yet.
+                </p>
+
+            </div>
+
+        `;
+
+
+        window.lucide
+            ?.createIcons();
+
+
+        return;
+
+    }
+
+
+    travelerNotificationList.innerHTML =
+
+        notifications
+            .map(
+                notification => {
+
+                    const icon =
+                        getTravelerNotificationIcon(
+                            notification.type
+                        );
+
+
+                    return `
+
+                        <button
+    type="button"
+    class="
+        traveler-notification-item
+        ${notification.unread
+                            ?
+                            "unread"
+                            :
+                            ""
+                        }
+    "
+    data-notification-source="${notification.source}"
+    data-notification-id="${escapeHTML(notification.id)}"
+    data-notification-type="${escapeHTML(notification.type)}"
+    data-destination-id="${escapeHTML(notification.destinationId)}"
+>
+
+                            <div
+                                class="
+                                    traveler-notification-icon
+                                    ${notification.type}
+                                "
+                            >
+
+                                <i data-lucide="${icon}"></i>
+
+                            </div>
+
+
+                            <div
+                                class="traveler-notification-content"
+                            >
+
+                                <p>
+
+                                    ${getTravelerNotificationMessage(notification)}
+
+                                </p>
+
+
+                                <div
+                                    class="traveler-notification-time"
+                                >
+
+                                    ${formatTravelerNotificationTime(
+                            notification.createdAt
+                        )
+                        }
+
+                                </div>
+
+                            </div>
+
+
+                            ${notification.unread
+
+                            ?
+
+                            `
+                                        <span
+                                            class="traveler-notification-unread-dot"
+                                        ></span>
+                                    `
+
+                            :
+
+                            ""
+                        }
+
+                        </button>
+
+                    `;
+
+                }
+            )
+            .join(
+                ""
+            );
+
+
+    window.lucide
+        ?.createIcons();
+
+}
+
+
+/* =========================================================
+   STOP OLD ACCOUNT LISTENERS
+========================================================= */
+
+function stopTravelerNotificationListeners() {
+
+    if (
+        travelerNotificationsUnsubscribe
+    ) {
+
+        travelerNotificationsUnsubscribe();
+
+        travelerNotificationsUnsubscribe =
+            null;
+
+    }
+
+
+    if (
+        travelerNotificationReadsUnsubscribe
+    ) {
+
+        travelerNotificationReadsUnsubscribe();
+
+        travelerNotificationReadsUnsubscribe =
+            null;
+
+    }
+
+}
+
+
+/* =========================================================
+   START CURRENT ACCOUNT LISTENERS
+========================================================= */
+
+function startTravelerNotificationListeners(
+    user
+) {
+
+    stopTravelerNotificationListeners();
+
+
+    travelerNotifications =
+        [];
+
+
+    travelerReadNotificationIds =
+        new Set();
+
+
+    if (
+        !user
+    ) {
+
+        renderTravelerNotifications();
+
+        return;
+
+    }
+
+
+    /* =====================================================
+       PERSONAL SAVED / COMMENT NOTIFICATIONS
+    ===================================================== */
+
+    const personalQuery =
+        query(
+
+            collection(
+                db,
+                "travelerNotifications"
+            ),
+
+            where(
+                "userId",
+                "==",
+                user.uid
+            )
+
+        );
+
+
+    travelerNotificationsUnsubscribe =
+        onSnapshot(
+
+            personalQuery,
+
+            snapshot => {
+
+                travelerNotifications =
+                    snapshot.docs.map(
+                        documentSnapshot => ({
+
+                            id:
+                                documentSnapshot.id,
+
+                            ...documentSnapshot.data()
+
+                        })
+                    );
+
+
+                renderTravelerNotifications();
+
+            },
+
+            error => {
+
+                console.error(
+                    "TRAVELER NOTIFICATION ERROR:",
+                    error
+                );
+
+            }
+
+        );
+
+
+    /* =====================================================
+       READ RECEIPTS FOR GLOBAL NEW PLACE NOTIFICATIONS
+    ===================================================== */
+
+    const readsQuery =
+        query(
+
+            collection(
+                db,
+                "travelerNotificationReads"
+            ),
+
+            where(
+                "userId",
+                "==",
+                user.uid
+            )
+
+        );
+
+
+    travelerNotificationReadsUnsubscribe =
+        onSnapshot(
+
+            readsQuery,
+
+            snapshot => {
+
+                travelerReadNotificationIds =
+                    new Set(
+
+                        snapshot.docs
+                            .map(
+                                documentSnapshot =>
+                                    documentSnapshot
+                                        .data()
+                                        .notificationId
+                            )
+                            .filter(
+                                Boolean
+                            )
+
+                    );
+
+
+                renderTravelerNotifications();
+
+            },
+
+            error => {
+
+                console.error(
+                    "NOTIFICATION READ LISTENER ERROR:",
+                    error
+                );
+
+            }
+
+        );
+
+}
+
+
+/* =========================================================
+   MARK SINGLE NOTIFICATION READ
+========================================================= */
+
+async function markTravelerNotificationRead(
+    source,
+    notificationId
+) {
+
+    const user =
+        auth.currentUser;
+
+
+    if (
+        !user
+        ||
+        !notificationId
+    ) {
+
+        return;
+
+    }
+
+
+    /* =====================================================
+       PERSONAL NOTIFICATION
+    ===================================================== */
+
+    if (
+        source ===
+        "personal"
+    ) {
+
+        await updateDoc(
+
+            doc(
+                db,
+                "travelerNotifications",
+                notificationId
+            ),
+
+            {
+                unread:
+                    false
+            }
+
+        );
+
+
+        return;
+
+    }
+
+
+    /* =====================================================
+       GLOBAL NEW PLACE NOTIFICATION
+    ===================================================== */
+
+    await setDoc(
+
+        doc(
+            db,
+            "travelerNotificationReads",
+            `${user.uid}_${notificationId}`
+        ),
+
+        {
+
+            userId:
+                user.uid,
+
+            notificationId:
+                notificationId,
+
+            readAt:
+                serverTimestamp()
+
+        },
+
+        {
+            merge:
+                true
+        }
+
+    );
+
+}
+
+
+/* =========================================================
+   MARK ALL READ
+========================================================= */
+
+async function markAllTravelerNotificationsRead() {
+
+    const user =
+        auth.currentUser;
+
+
+    if (
+        !user
+    ) {
+
+        return;
+
+    }
+
+
+    const notifications =
+        getCombinedTravelerNotifications();
+
+
+    const promises =
+        [];
+
+
+    notifications.forEach(
+        notification => {
+
+            if (
+                !notification.unread
+            ) {
+
+                return;
+
+            }
+
+
+            promises.push(
+
+                markTravelerNotificationRead(
+
+                    notification.source,
+
+                    notification.id
+
+                )
+
+            );
+
+        }
+    );
+
+
+    try {
+
+        await Promise.all(
+            promises
+        );
+
+    } catch (
+    error
+    ) {
+
+        console.error(
+            "MARK NOTIFICATIONS READ ERROR:",
+            error
+        );
+
+    }
+
+}
+
+/* =========================================================
+   CREATE / REPLACE SAVED NOTIFICATION
+   ONLY ONE PER USER + DESTINATION
+========================================================= */
+
+async function recordSavedNotification(
+    destinationId,
+    destinationName
+) {
+
+    const user =
+        auth.currentUser;
+
+
+    if (
+        !user
+        ||
+        !destinationId
+    ) {
+
+        return;
+
+    }
+
+
+    const notificationId =
+        `saved_${user.uid}_${destinationId}`;
+
+
+    await setDoc(
+
+        doc(
+            db,
+            "travelerNotifications",
+            notificationId
+        ),
+
+        {
+
+            userId:
+                user.uid,
+
+            type:
+                "saved",
+
+            destinationId:
+                destinationId,
+
+            destinationName:
+                destinationName
+                ||
+                "Destination",
+
+            unread:
+                true,
+
+            createdAt:
+                serverTimestamp()
+
+        }
+
+    );
+
+}
+
+
+/* =========================================================
+   REMOVE SAVED NOTIFICATIONS
+   ALSO CLEANS OLD DUPLICATES
+========================================================= */
+
+async function removeSavedNotifications(
+    destinationId
+) {
+
+    const user =
+        auth.currentUser;
+
+
+    if (
+        !user
+        ||
+        !destinationId
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       Find every old saved notification for this
+       user + destination.
+
+       This also removes duplicates that were
+       created before this fix.
+    */
+
+    const matchingNotifications =
+        travelerNotifications.filter(
+            notification =>
+
+                notification.type ===
+                "saved"
+
+                &&
+
+                notification.destinationId ===
+                destinationId
+
+                &&
+
+                notification.userId ===
+                user.uid
+        );
+
+
+    const deletePromises =
+        matchingNotifications.map(
+            notification =>
+
+                deleteDoc(
+
+                    doc(
+                        db,
+                        "travelerNotifications",
+                        notification.id
+                    )
+
+                )
+
+        );
+
+
+    /*
+       Also delete the new deterministic document ID,
+       even if it is not yet in the realtime array.
+    */
+
+    const deterministicId =
+        `saved_${user.uid}_${destinationId}`;
+
+
+    if (
+        !matchingNotifications.some(
+            notification =>
+                notification.id ===
+                deterministicId
+        )
+    ) {
+
+        deletePromises.push(
+
+            deleteDoc(
+
+                doc(
+                    db,
+                    "travelerNotifications",
+                    deterministicId
+                )
+
+            )
+
+        );
+
+    }
+
+
+    await Promise.all(
+        deletePromises
+    );
+
+}
+
+
+/* =========================================================
+   BELL OPEN / CLOSE
+========================================================= */
+
+travelerNotificationButton
+    ?.addEventListener(
+        "click",
+        event => {
+
+            event.stopPropagation();
+
+
+            const willOpen =
+                travelerNotificationPanel.hidden;
+
+
+            travelerNotificationPanel.hidden =
+                !willOpen;
+
+
+            travelerNotificationButton
+                .setAttribute(
+
+                    "aria-expanded",
+
+                    String(
+                        willOpen
+                    )
+
+                );
+
+
+            if (
+                willOpen
+            ) {
+
+                renderTravelerNotifications();
+
+            }
+
+        }
+    );
+
+
+/* =========================================================
+   MARK ALL READ BUTTON
+========================================================= */
+
+markTravelerNotificationsRead
+    ?.addEventListener(
+        "click",
+        async event => {
+
+            event.stopPropagation();
+
+            await markAllTravelerNotificationsRead();
+
+        }
+    );
+
+
+/* =========================================================
+   CLICK TRAVELER NOTIFICATION
+========================================================= */
+
+travelerNotificationList
+    ?.addEventListener(
+        "click",
+        async event => {
+
+            const item =
+                event.target.closest(
+                    ".traveler-notification-item"
+                );
+
+
+            if (
+                !item
+            ) {
+
+                return;
+
+            }
+
+
+            const source =
+                item.dataset
+                    .notificationSource;
+
+
+            const notificationId =
+                item.dataset
+                    .notificationId;
+
+
+            const notificationType =
+                item.dataset
+                    .notificationType;
+
+
+            const destinationId =
+                item.dataset
+                    .destinationId;
+
+
+            /* =====================================================
+               MARK AS READ
+            ===================================================== */
+
+            try {
+
+                await markTravelerNotificationRead(
+
+                    source,
+
+                    notificationId
+
+                );
+
+            } catch (
+            error
+            ) {
+
+                console.error(
+                    "READ NOTIFICATION ERROR:",
+                    error
+                );
+
+            }
+
+
+            /* =====================================================
+               CLOSE NOTIFICATION PANEL
+            ===================================================== */
+
+            travelerNotificationPanel.hidden =
+                true;
+
+
+            travelerNotificationButton
+                ?.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+
+
+            /* =====================================================
+               SAVED NOTIFICATION
+               GO TO SAVED PLACES
+            ===================================================== */
+
+            if (
+                notificationType ===
+                "saved"
+            ) {
+
+                /*
+                   Use your existing Saved navigation.
+                */
+
+                savedNavButton
+                    ?.click();
+
+
+                /*
+                   After Saved Places renders,
+                   scroll to the exact saved destination.
+                */
+
+                requestAnimationFrame(
+                    () => {
+
+                        const savedCard =
+
+                            Array
+                                .from(
+                                    document.querySelectorAll(
+                                        "#savedGrid .destination-card"
+                                    )
+                                )
+                                .find(
+                                    card =>
+                                        card.dataset.id ===
+                                        destinationId
+                                );
+
+
+                        if (
+                            savedCard
+                        ) {
+
+                            savedCard.scrollIntoView({
+
+                                behavior:
+                                    "smooth",
+
+                                block:
+                                    "center"
+
+                            });
+
+                        }
+
+                    }
+                );
+
+
+                return;
+
+            }
+
+
+            /* =====================================================
+               COMMENT / NEW PLACE NOTIFICATION
+               OPEN DESTINATION DETAILS
+            ===================================================== */
+
+            const card =
+                Array
+                    .from(
+                        document.querySelectorAll(
+                            ".featured-section .destination-card"
+                        )
+                    )
+                    .find(
+                        destinationCard =>
+                            destinationCard.dataset.id ===
+                            destinationId
+                    );
+
+
+            if (
+                card
+            ) {
+
+                openDestinationDetails(
+                    card
+                );
+
+            }
+
+        }
+    );
+
+
+
+/* =========================================================
+   CLICK OUTSIDE
+========================================================= */
+
+document.addEventListener(
+    "click",
+    event => {
+
+        if (
+            travelerNotificationPanel?.hidden
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            !event.target.closest(
+                ".traveler-notification-wrap"
+            )
+        ) {
+
+            travelerNotificationPanel.hidden =
+                true;
+
+
+            travelerNotificationButton
+                ?.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+/* =========================================================
+   LIVE TRAVELER LOCATION
+========================================================= */
+
+const FALLBACK_TRAVELER_LOCATION = {
+
+    lat:
+        11.7753,
+
+    lng:
+        124.8861
+
+};
+
+
+let currentTravelerLocation =
+    null;
+
+
+let travelerLocationWatchId =
+    null;
+
+
+/* =========================================================
+   CALCULATE DISTANCE BETWEEN TWO GPS POINTS
+   HAVERSINE FORMULA
+========================================================= */
+
+function calculateDistanceKm(
+    startLat,
+    startLng,
+    endLat,
+    endLng
+) {
+
+    const latitude1 =
         Number(
-            lng
+            startLat
+        );
+
+
+    const longitude1 =
+        Number(
+            startLng
+        );
+
+
+    const latitude2 =
+        Number(
+            endLat
+        );
+
+
+    const longitude2 =
+        Number(
+            endLng
         );
 
 
     if (
         !Number.isFinite(
-            destinationLat
+            latitude1
         )
         ||
         !Number.isFinite(
-            destinationLng
+            longitude1
+        )
+        ||
+        !Number.isFinite(
+            latitude2
+        )
+        ||
+        !Number.isFinite(
+            longitude2
         )
     ) {
 
@@ -320,7 +1897,7 @@ function calculateDistanceFromCatbalogan(
     }
 
 
-    const earthRadius =
+    const earthRadiusKm =
         6371;
 
 
@@ -331,60 +1908,426 @@ function calculateDistanceFromCatbalogan(
             180;
 
 
-    const dLat =
+    const deltaLatitude =
         toRadians(
-            destinationLat -
-            startLat
+            latitude2 -
+            latitude1
         );
 
 
-    const dLng =
+    const deltaLongitude =
         toRadians(
-            destinationLng -
-            startLng
+            longitude2 -
+            longitude1
         );
 
 
     const a =
+
         Math.sin(
-            dLat / 2
+            deltaLatitude / 2
         ) ** 2
+
         +
+
         Math.cos(
             toRadians(
-                startLat
+                latitude1
             )
         )
+
         *
+
         Math.cos(
             toRadians(
-                destinationLat
+                latitude2
             )
         )
+
         *
+
         Math.sin(
-            dLng / 2
+            deltaLongitude / 2
         ) ** 2;
 
 
-    const distance =
-        earthRadius *
-        (
-            2 *
-            Math.atan2(
-                Math.sqrt(
-                    a
-                ),
-                Math.sqrt(
-                    1 - a
-                )
+    const c =
+        2 *
+        Math.atan2(
+
+            Math.sqrt(
+                a
+            ),
+
+            Math.sqrt(
+                1 - a
             )
+
         );
 
 
-    return distance;
+    return earthRadiusKm *
+        c;
 
 }
+
+
+/* =========================================================
+   DISTANCE FROM CURRENT TRAVELER TO DESTINATION
+========================================================= */
+
+function calculateDistanceToDestination(
+    destinationLat,
+    destinationLng
+) {
+
+    /*
+       If GPS permission has not been received yet,
+       temporarily use Catbalogan as the fallback.
+    */
+
+    const travelerLocation =
+        currentTravelerLocation
+        ||
+        FALLBACK_TRAVELER_LOCATION;
+
+
+    return calculateDistanceKm(
+
+        travelerLocation.lat,
+
+        travelerLocation.lng,
+
+        destinationLat,
+
+        destinationLng
+
+    );
+
+}
+
+/* =========================================================
+   FORMAT DISTANCE LABEL
+========================================================= */
+
+function getDistanceLabel(
+    distance
+) {
+
+    if (
+        distance ===
+        null
+    ) {
+
+        return "Location unavailable";
+
+    }
+
+
+    /* =====================================================
+       REAL GPS IS AVAILABLE
+    ===================================================== */
+
+    if (
+        currentTravelerLocation
+    ) {
+
+        return `${distance.toFixed(1)} km away`;
+
+    }
+
+
+    /* =====================================================
+       GPS DENIED / UNAVAILABLE
+       USING CATBALOGAN FALLBACK
+    ===================================================== */
+
+    return `${distance.toFixed(1)} km from Catbalogan`;
+
+}
+
+/* =========================================================
+   UPDATE ALL VISIBLE DISTANCE LABELS
+========================================================= */
+
+function updateLiveDistanceLabels() {
+
+    document
+        .querySelectorAll(
+            ".destination-card"
+        )
+        .forEach(
+            card => {
+
+                const latitude =
+                    Number(
+                        card.dataset.lat
+                    );
+
+
+                const longitude =
+                    Number(
+                        card.dataset.lng
+                    );
+
+
+                if (
+                    !Number.isFinite(
+                        latitude
+                    )
+                    ||
+                    !Number.isFinite(
+                        longitude
+                    )
+                ) {
+
+                    return;
+
+                }
+
+
+                const distance =
+                    calculateDistanceToDestination(
+                        latitude,
+                        longitude
+                    );
+
+
+                const distanceValue =
+                    card.querySelector(
+                        ".distance-value"
+                    );
+
+
+                if (
+                    !distanceValue
+                ) {
+
+                    return;
+
+                }
+
+
+                distanceValue.textContent =
+                    getDistanceLabel(
+                        distance
+                    );
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   START LIVE DEVICE LOCATION
+========================================================= */
+
+function startLiveLocationTracking() {
+
+    /* =========================================
+       CHECK BROWSER SUPPORT
+    ========================================= */
+
+    if (
+        !("geolocation" in navigator)
+    ) {
+
+        console.warn(
+            "Geolocation is not supported by this browser."
+        );
+
+
+        return;
+
+    }
+
+
+    /* =========================================
+       DO NOT CREATE MULTIPLE GPS WATCHERS
+    ========================================= */
+
+    if (
+        travelerLocationWatchId !==
+        null
+    ) {
+
+        return;
+
+    }
+
+
+    travelerLocationWatchId =
+        navigator.geolocation
+            .watchPosition(
+
+                position => {
+
+                    const latitude =
+                        Number(
+                            position.coords
+                                .latitude
+                        );
+
+
+                    const longitude =
+                        Number(
+                            position.coords
+                                .longitude
+                        );
+
+
+                    if (
+                        !Number.isFinite(
+                            latitude
+                        )
+                        ||
+                        !Number.isFinite(
+                            longitude
+                        )
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    /* =================================
+                       SAVE CURRENT LIVE POSITION
+                    ================================= */
+
+                    currentTravelerLocation = {
+
+                        lat:
+                            latitude,
+
+                        lng:
+                            longitude,
+
+                        accuracy:
+                            position.coords
+                                .accuracy
+
+                    };
+
+
+                    console.log(
+
+                        "Traveler live location:",
+
+                        currentTravelerLocation
+
+                    );
+
+
+                    /* =================================
+                       UPDATE ALL DISTANCES
+                    ================================= */
+
+                    updateLiveDistanceLabels();
+
+                },
+
+
+                error => {
+
+                    /*
+                       Keep using the Catbalogan fallback
+                       instead of breaking the app.
+                    */
+
+                    switch (
+                    error.code
+                    ) {
+
+                        case error.PERMISSION_DENIED:
+
+                            console.warn(
+                                "Location permission was denied."
+                            );
+
+                            break;
+
+
+                        case error.POSITION_UNAVAILABLE:
+
+                            console.warn(
+                                "Current location is unavailable."
+                            );
+
+                            break;
+
+
+                        case error.TIMEOUT:
+
+                            console.warn(
+                                "Location request timed out."
+                            );
+
+                            break;
+
+
+                        default:
+
+                            console.warn(
+                                "Unable to get traveler location:",
+                                error
+                            );
+
+                    }
+
+
+                    currentTravelerLocation =
+                        null;
+
+
+                    updateLiveDistanceLabels();
+
+                },
+
+
+                {
+                    enableHighAccuracy:
+                        true,
+
+                    timeout:
+                        15000,
+
+                    maximumAge:
+                        10000
+                }
+
+            );
+
+}
+
+
+/* =========================================================
+   STOP GPS WHEN PAGE CLOSES
+========================================================= */
+
+window.addEventListener(
+    "pagehide",
+    () => {
+
+        if (
+            travelerLocationWatchId !==
+            null
+        ) {
+
+            navigator.geolocation
+                .clearWatch(
+                    travelerLocationWatchId
+                );
+
+
+            travelerLocationWatchId =
+                null;
+
+        }
+
+    }
+);
 
 
 /* =========================================================
@@ -498,23 +2441,16 @@ function createRealtimeDestinationCard(
 
 
     const distance =
-        calculateDistanceFromCatbalogan(
+        calculateDistanceToDestination(
             destination.lat,
             destination.lng
         );
 
 
     const distanceText =
-        distance !==
-            null
-
-            ?
-
-            `${distance.toFixed(1)} km away`
-
-            :
-
-            "Samar";
+        getDistanceLabel(
+            distance
+        );
 
 
     let locationText =
@@ -632,11 +2568,13 @@ function createRealtimeDestinationCard(
 
                     <span class="distance">
 
-                        <i data-lucide="navigation"></i>
+    <i data-lucide="navigation"></i>
 
-                        ${distanceText}
+    <span class="distance-value">
+        ${distanceText}
+    </span>
 
-                    </span>
+</span>
 
 
                     <button
@@ -840,6 +2778,7 @@ function startRealtimeDestinationListener() {
 
 
             renderRealtimeDestinations();
+            renderTravelerNotifications();
 
         },
 
@@ -887,6 +2826,8 @@ function startRealtimeDestinationListener() {
 ========================================================= */
 
 startRealtimeDestinationListener();
+
+startLiveLocationTracking();
 
 /* =========================================================
    FIREBASE AUTHENTICATION
@@ -2692,6 +4633,10 @@ onAuthStateChanged(
             user
         );
 
+        startTravelerNotificationListeners(
+            user
+        );
+
         /* =========================================
    SWITCH SAVED PLACES TO THIS ACCOUNT
 ========================================= */
@@ -4265,6 +6210,10 @@ function toggleSavedPlace(
        REMOVE
     ===================================================== */
 
+    /* =====================================================
+   REMOVE SAVED DESTINATION
+===================================================== */
+
     if (
         isAlreadySaved
     ) {
@@ -4276,11 +6225,30 @@ function toggleSavedPlace(
                     placeId
             );
 
+
+        /* =============================================
+           REMOVE ITS SAVED NOTIFICATION TOO
+        ============================================= */
+
+        removeSavedNotifications(
+            placeId
+        )
+            .catch(
+                error => {
+
+                    console.error(
+                        "REMOVE SAVED NOTIFICATION ERROR:",
+                        error
+                    );
+
+                }
+            );
+
     }
 
 
     /* =====================================================
-       ADD
+       SAVE DESTINATION
     ===================================================== */
 
     else {
@@ -4288,6 +6256,41 @@ function toggleSavedPlace(
         savedPlaces.push(
             placeId
         );
+
+
+        const destinationName =
+            card.dataset.name
+            ||
+            card.querySelector(
+                "h4"
+            )
+                ?.textContent
+                .trim()
+            ||
+            "Destination";
+
+
+        /* =============================================
+           CREATE ONE SAVED NOTIFICATION
+        ============================================= */
+
+        recordSavedNotification(
+
+            placeId,
+
+            destinationName
+
+        )
+            .catch(
+                error => {
+
+                    console.error(
+                        "SAVE NOTIFICATION ERROR:",
+                        error
+                    );
+
+                }
+            );
 
     }
 
@@ -5733,6 +7736,52 @@ async function submitComment() {
 
             }
 
+        );
+
+        /* =========================================================
+   REALTIME COMMENT NOTIFICATION
+========================================================= */
+
+        const commentedDestination =
+            realtimeDestinations.find(
+                destination =>
+                    destination.id ===
+                    activeDetailsPlaceId
+            );
+
+
+        const commentedDestinationName =
+            commentedDestination?.name
+            ||
+            detailsTitle?.textContent
+                ?.trim()
+            ||
+            "Destination";
+
+
+        recordTravelerNotification({
+
+            type:
+                "comment",
+
+            destinationId:
+                activeDetailsPlaceId,
+
+            destinationName:
+                commentedDestinationName,
+
+            commentText:
+                text
+
+        }).catch(
+            error => {
+
+                console.error(
+                    "COMMENT NOTIFICATION ERROR:",
+                    error
+                );
+
+            }
         );
 
 
