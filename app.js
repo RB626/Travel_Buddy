@@ -2693,6 +2693,44 @@ onAuthStateChanged(
         );
 
         /* =========================================
+   SWITCH SAVED PLACES TO THIS ACCOUNT
+========================================= */
+
+        updateFavoriteButtons();
+
+        updateSavedCount();
+
+
+        /* =========================================
+           REFRESH SAVED PAGE
+        ========================================= */
+
+        if (
+            page?.classList.contains(
+                "saved-mode"
+            )
+        ) {
+
+            renderSavedPlaces();
+
+        }
+
+
+        /* =========================================
+           REFRESH SAVED MAP MARKERS
+        ========================================= */
+
+        if (
+            travelMap
+        ) {
+
+            refreshTravelMapMarkers(
+                false
+            );
+
+        }
+
+        /* =========================================
    UPDATE OPEN DETAILS AUTH STATE
 ========================================= */
 
@@ -3901,17 +3939,78 @@ document.addEventListener(
     }
 );
 
+/* =========================================================
+   SAVED PLACES — SEPARATE FOR EACH FIREBASE ACCOUNT
+========================================================= */
+
+function getSavedStorageKey() {
+
+    const user =
+        auth.currentUser;
+
+
+    /* =========================================
+       NO USER = NO ACCOUNT SAVED STORAGE
+    ========================================= */
+
+    if (
+        !user
+    ) {
+
+        return null;
+
+    }
+
+
+    /*
+       Example:
+
+       travelBuddySavedPlaces_abcFirebaseUID123
+    */
+
+    return `${SAVED_STORAGE_KEY}_${user.uid}`;
+
+}
+
+
+/* =========================================================
+   GET CURRENT USER'S SAVED PLACES
+========================================================= */
+
 function getSavedPlaces() {
+
+    const storageKey =
+        getSavedStorageKey();
+
+
+    if (
+        !storageKey
+    ) {
+
+        return [];
+
+    }
+
 
     try {
 
         return JSON.parse(
+
             localStorage.getItem(
-                SAVED_STORAGE_KEY
+                storageKey
             )
+
         ) || [];
 
-    } catch {
+    } catch (
+    error
+    ) {
+
+        console.error(
+            "SAVED PLACES READ ERROR:",
+            error
+        );
+
 
         return [];
 
@@ -3920,11 +4019,35 @@ function getSavedPlaces() {
 }
 
 
-function saveSavedPlaces(savedPlaces) {
+/* =========================================================
+   SAVE CURRENT USER'S SAVED PLACES
+========================================================= */
+
+function saveSavedPlaces(
+    savedPlaces
+) {
+
+    const storageKey =
+        getSavedStorageKey();
+
+
+    if (
+        !storageKey
+    ) {
+
+        return;
+
+    }
+
 
     localStorage.setItem(
-        SAVED_STORAGE_KEY,
-        JSON.stringify(savedPlaces)
+
+        storageKey,
+
+        JSON.stringify(
+            savedPlaces
+        )
+
     );
 
 }
@@ -4077,10 +4200,41 @@ function updateFavoriteButtons() {
 
 }
 
-function toggleSavedPlace(card) {
+/* =========================================================
+   SAVE / UNSAVE DESTINATION
+========================================================= */
 
-    if (!card) {
+function toggleSavedPlace(
+    card
+) {
+
+    if (
+        !card
+    ) {
+
         return;
+
+    }
+
+
+    /* =====================================================
+       USER MUST BE LOGGED IN
+    ===================================================== */
+
+    const user =
+        auth.currentUser;
+
+
+    if (
+        !user
+    ) {
+
+        showSignIn();
+
+        openAuthModal();
+
+        return;
+
     }
 
 
@@ -4088,8 +4242,12 @@ function toggleSavedPlace(card) {
         card.dataset.id;
 
 
-    if (!placeId) {
+    if (
+        !placeId
+    ) {
+
         return;
+
     }
 
 
@@ -4103,15 +4261,29 @@ function toggleSavedPlace(card) {
         );
 
 
-    if (isAlreadySaved) {
+    /* =====================================================
+       REMOVE
+    ===================================================== */
+
+    if (
+        isAlreadySaved
+    ) {
 
         savedPlaces =
             savedPlaces.filter(
                 id =>
-                    id !== placeId
+                    id !==
+                    placeId
             );
 
-    } else {
+    }
+
+
+    /* =====================================================
+       ADD
+    ===================================================== */
+
+    else {
 
         savedPlaces.push(
             placeId
@@ -4125,9 +4297,43 @@ function toggleSavedPlace(card) {
     );
 
 
+    /* =====================================================
+       UPDATE UI
+    ===================================================== */
+
     updateFavoriteButtons();
 
     updateSavedCount();
+
+
+    /* =====================================================
+       UPDATE SAVED PAGE IF OPEN
+    ===================================================== */
+
+    if (
+        page?.classList.contains(
+            "saved-mode"
+        )
+    ) {
+
+        renderSavedPlaces();
+
+    }
+
+
+    /* =====================================================
+       UPDATE SAVED MAP MARKERS
+    ===================================================== */
+
+    if (
+        travelMap
+    ) {
+
+        refreshTravelMapMarkers(
+            false
+        );
+
+    }
 
 }
 
