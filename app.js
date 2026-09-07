@@ -8164,10 +8164,9 @@ function openDestinationDetails(
 
     }
 
-
-    /* =====================================================
-       ACTIVE DESTINATION
-    ===================================================== */
+    recordDestinationUniqueView(
+        placeId
+    );
 
     activeDetailsPlaceId =
         placeId;
@@ -8309,6 +8308,116 @@ function openDestinationDetails(
     ) {
 
         window.lucide.createIcons();
+
+    }
+
+}
+
+/* =========================================================
+   RECORD UNIQUE DESTINATION VIEW
+
+   ONE FIREBASE USER = ONE VIEW PER DESTINATION
+========================================================= */
+
+async function recordDestinationUniqueView(
+    destinationId
+) {
+
+    const user =
+        auth.currentUser;
+
+
+    /*
+       Guests can still browse View Details,
+       but they are not counted because they
+       don't have a Firebase UID.
+    */
+
+    if (
+        !user
+        ||
+        !destinationId
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       Example document ID:
+
+       abcDestination_5Yh38FirebaseUID
+
+       Same user opening the same place again
+       writes to the SAME document.
+    */
+
+    const viewId =
+        `${destinationId}_${user.uid}`;
+
+
+    try {
+
+        await setDoc(
+
+            doc(
+                db,
+                "destinationViews",
+                viewId
+            ),
+
+            {
+                destinationId:
+                    destinationId,
+
+                userId:
+                    user.uid,
+
+                userName:
+                    user.displayName
+                    ||
+                    user.email
+                        ?.split("@")[0]
+                    ||
+                    "Traveler",
+
+                userEmail:
+                    user.email
+                    ||
+                    "",
+
+                userPhoto:
+                    user.photoURL
+                    ||
+                    "",
+
+                viewedAt:
+                    serverTimestamp()
+            },
+
+            {
+                merge:
+                    true
+            }
+
+        );
+
+
+        console.log(
+            "Unique destination view recorded:",
+            destinationId
+        );
+
+
+    } catch (
+    error
+    ) {
+
+        console.error(
+            "DESTINATION VIEW ERROR:",
+            error
+        );
 
     }
 
