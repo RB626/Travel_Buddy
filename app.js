@@ -1551,6 +1551,16 @@ travelerNotificationButton
 
             event.stopPropagation();
 
+            if (
+                !requireTravelerAccount(
+                    "view your notifications"
+                )
+            ) {
+
+                return;
+
+            }
+
 
             const willOpen =
                 travelerNotificationPanel.hidden;
@@ -3815,6 +3825,49 @@ function showAuthMessage(
         "error",
         isError
     );
+
+}
+
+/* =========================================================
+   REQUIRE TRAVELER ACCOUNT
+========================================================= */
+
+function requireTravelerAccount(
+    action = "use this feature"
+) {
+
+    const user =
+        auth.currentUser;
+
+
+    /* =========================================
+       ALREADY SIGNED IN
+    ========================================= */
+
+    if (
+        user
+    ) {
+
+        return true;
+
+    }
+
+
+    /* =========================================
+       GUEST -> SHOW AUTH
+    ========================================= */
+
+    showSignIn();
+
+    openAuthModal();
+
+
+    showAuthMessage(
+        `Sign in or create an account to ${action}.`
+    );
+
+
+    return false;
 
 }
 
@@ -6307,21 +6360,19 @@ async function toggleSavedPlace(
     }
 
 
-    const user =
-        auth.currentUser;
-
-
     if (
-        !user
+        !requireTravelerAccount(
+            "save destinations"
+        )
     ) {
-
-        showSignIn();
-
-        openAuthModal();
 
         return;
 
     }
+
+
+    const user =
+        auth.currentUser;
 
 
     const placeId =
@@ -6644,6 +6695,16 @@ function renderSavedPlaces() {
 savedNavButton?.addEventListener(
     "click",
     () => {
+
+        if (
+            !requireTravelerAccount(
+                "view your saved places"
+            )
+        ) {
+
+            return;
+
+        }
 
         page?.classList.remove(
             "map-mode"
@@ -7092,6 +7153,21 @@ rateStars.forEach(
                 }
 
 
+                /* =========================================
+                   ACCOUNT REQUIRED
+                ========================================= */
+
+                if (
+                    !requireTravelerAccount(
+                        "rate this destination"
+                    )
+                ) {
+
+                    return;
+
+                }
+
+
                 const rating =
                     Number(
                         star.dataset.rating
@@ -7111,12 +7187,6 @@ rateStars.forEach(
                         rating
 
                     );
-
-
-                    /*
-                       No manual rendering needed.
-                       Firestore onSnapshot will update it.
-                    */
 
                 } catch (
                 error
@@ -7334,10 +7404,6 @@ function formatCommentDate(
 
 /* =========================================================
    UPDATE COMMENT COMPOSER USER
-========================================================= */
-
-/* =========================================================
-   UPDATE COMMENT COMPOSER USER
    GOOGLE PHOTO + INITIALS FALLBACK
 ========================================================= */
 
@@ -7371,11 +7437,30 @@ function updateCommentComposerIdentity() {
     ) {
 
         composerAvatar.innerHTML =
-            "?";
+            `<i data-lucide="lock-keyhole"></i>`;
+
+
+        commentInput.value =
+            "";
+
+
+        commentInput.readOnly =
+            true;
 
 
         commentInput.placeholder =
-            "Sign in to write a comment...";
+            "Sign in or create an account to comment...";
+
+
+        commentSubmitButton
+            ?.setAttribute(
+                "aria-label",
+                "Sign in to comment"
+            );
+
+
+        window.lucide
+            ?.createIcons();
 
 
         return;
@@ -7431,11 +7516,48 @@ function updateCommentComposerIdentity() {
 
     }
 
+    commentInput.readOnly =
+        false;
+
+
+    commentSubmitButton
+        ?.setAttribute(
+            "aria-label",
+            "Post comment"
+        );
 
     commentInput.placeholder =
         "Write a comment...";
 
 }
+
+/* =========================================================
+   GUEST COMMENT BOX
+========================================================= */
+
+commentInput
+    ?.addEventListener(
+        "pointerdown",
+        event => {
+
+            if (
+                auth.currentUser
+            ) {
+
+                return;
+
+            }
+
+
+            event.preventDefault();
+
+
+            requireTravelerAccount(
+                "write a comment"
+            );
+
+        }
+    );
 
 
 /* =========================================================
@@ -7763,21 +7885,19 @@ async function submitComment() {
     }
 
 
-    const user =
-        auth.currentUser;
-
-
     if (
-        !user
+        !requireTravelerAccount(
+            "post a comment"
+        )
     ) {
-
-        showSignIn();
-
-        openAuthModal();
 
         return;
 
     }
+
+
+    const user =
+        auth.currentUser;
 
 
     const text =

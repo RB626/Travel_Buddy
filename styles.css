@@ -6254,3 +6254,68 @@ body.details-modal-open {
     }
 
 }
+
+/* =========================================================
+   SCROLLABLE COMMENTS LIST
+========================================================= */
+
+.comments-list {
+    max-height: 360px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    padding-right: 6px;
+
+    overscroll-behavior: contain;
+
+    scroll-behavior: smooth;
+}
+
+
+/* =========================================================
+   CUSTOM COMMENT SCROLLBAR
+========================================================= */
+
+.comments-list::-webkit-scrollbar {
+    width: 7px;
+}
+
+
+.comments-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+
+.comments-list::-webkit-scrollbar-thumb {
+    background: rgba(7, 159, 163, 0.28);
+
+    border-radius: 999px;
+}
+
+
+.comments-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(7, 159, 163, 0.48);
+}
+
+
+/* FIREFOX */
+
+.comments-list {
+    scrollbar-width: thin;
+    scrollbar-color:
+        rgba(7, 159, 163, 0.32) transparent;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 700px) {
+
+    .comments-list {
+        max-height: 300px;
+    }
+
+}
