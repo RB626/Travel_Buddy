@@ -17,6 +17,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 
 
+import {
+    getFirestore
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+
 /* =========================================================
    FIREBASE PROJECT CONFIG
 ========================================================= */
@@ -48,7 +53,7 @@ const firebaseConfig = {
 
 
 /* =========================================================
-   INITIALIZE FIREBASE
+   INITIALIZE
 ========================================================= */
 
 const app =
@@ -57,15 +62,11 @@ const app =
     );
 
 
-/* ANALYTICS */
-
 const analytics =
     getAnalytics(
         app
     );
 
-
-/* AUTHENTICATION */
 
 const auth =
     getAuth(
@@ -73,8 +74,15 @@ const auth =
     );
 
 
+const db =
+    getFirestore(
+        app
+    );
+
+
 export {
     app,
     analytics,
-    auth
+    auth,
+    db
 };

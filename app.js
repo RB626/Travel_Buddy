@@ -1,5 +1,16 @@
 
-import { auth } from "./firebase-config.js";
+import {
+    auth,
+    db
+} from "./firebase-config.js";
+
+
+import {
+    collection,
+    query,
+    where,
+    onSnapshot
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import {
     createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut,
     setPersistence,
@@ -186,9 +197,6 @@ const savedNavCount =
 const browseDestinationsButton =
     document.getElementById("browseDestinationsButton");
 
-const favoriteButtons =
-    document.querySelectorAll(".favorite-btn");
-
 const exploreNavButton =
     document.getElementById("exploreNavButton");
 
@@ -213,8 +221,14 @@ const filterMenu =
 const filterOptions =
     document.querySelectorAll(".filter-option");
 
-const destinationCards =
-    document.querySelectorAll(".destination-card");
+function getDestinationCards() {
+
+    return document
+        .querySelectorAll(
+            ".featured-section .destination-card"
+        );
+
+}
 
 const seeAllButton =
     document.getElementById("seeAllButton");
@@ -230,6 +244,645 @@ let travelMapInfoWindow =
 ========================================= */
 
 let activeCategory = "All";
+
+/* =========================================================
+   REALTIME FIRESTORE DESTINATIONS
+========================================================= */
+
+const destinationGrid =
+    document.getElementById(
+        "destinationGrid"
+    );
+
+
+let realtimeDestinations =
+    [];
+
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
+
+function escapeDestinationHTML(
+    value
+) {
+
+    return String(
+        value ?? ""
+    )
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
+
+}
+
+
+/* =========================================================
+   DISTANCE FROM CATBALOGAN
+========================================================= */
+
+function calculateDistanceFromCatbalogan(
+    lat,
+    lng
+) {
+
+    const startLat =
+        11.7753;
+
+    const startLng =
+        124.8861;
+
+
+    const destinationLat =
+        Number(
+            lat
+        );
+
+    const destinationLng =
+        Number(
+            lng
+        );
+
+
+    if (
+        !Number.isFinite(
+            destinationLat
+        )
+        ||
+        !Number.isFinite(
+            destinationLng
+        )
+    ) {
+
+        return null;
+
+    }
+
+
+    const earthRadius =
+        6371;
+
+
+    const toRadians =
+        degrees =>
+            degrees *
+            Math.PI /
+            180;
+
+
+    const dLat =
+        toRadians(
+            destinationLat -
+            startLat
+        );
+
+
+    const dLng =
+        toRadians(
+            destinationLng -
+            startLng
+        );
+
+
+    const a =
+        Math.sin(
+            dLat / 2
+        ) ** 2
+        +
+        Math.cos(
+            toRadians(
+                startLat
+            )
+        )
+        *
+        Math.cos(
+            toRadians(
+                destinationLat
+            )
+        )
+        *
+        Math.sin(
+            dLng / 2
+        ) ** 2;
+
+
+    const distance =
+        earthRadius *
+        (
+            2 *
+            Math.atan2(
+                Math.sqrt(
+                    a
+                ),
+                Math.sqrt(
+                    1 - a
+                )
+            )
+        );
+
+
+    return distance;
+
+}
+
+
+/* =========================================================
+   CREATE DESTINATION CARD
+========================================================= */
+
+function createRealtimeDestinationCard(
+    destination
+) {
+
+    const id =
+        escapeDestinationHTML(
+            destination.id
+        );
+
+
+    const name =
+        escapeDestinationHTML(
+            destination.name
+            ||
+            "Unnamed destination"
+        );
+
+
+    const category =
+        escapeDestinationHTML(
+            destination.category
+            ||
+            "Destination"
+        );
+
+
+    const municipality =
+        escapeDestinationHTML(
+            destination.municipality
+            ||
+            ""
+        );
+
+
+    const barangay =
+        escapeDestinationHTML(
+            destination.barangay
+            ||
+            ""
+        );
+
+
+    const description =
+        escapeDestinationHTML(
+            destination.shortDesc
+            ||
+            destination.fullDesc
+            ||
+            ""
+        );
+
+
+    const image =
+        escapeDestinationHTML(
+            destination.img
+            ||
+            ""
+        );
+
+
+    const ratingNumber =
+        Number(
+            destination.rating
+            ||
+            0
+        );
+
+
+    const rating =
+        ratingNumber >
+            0
+
+            ?
+
+            ratingNumber
+                .toFixed(
+                    1
+                )
+
+            :
+
+            "New";
+
+
+    const distance =
+        calculateDistanceFromCatbalogan(
+            destination.lat,
+            destination.lng
+        );
+
+
+    const distanceText =
+        distance !==
+            null
+
+            ?
+
+            `${distance.toFixed(1)} km away`
+
+            :
+
+            "Samar";
+
+
+    let locationText =
+        municipality;
+
+
+    if (
+        barangay
+        &&
+        municipality
+    ) {
+
+        locationText =
+            `${barangay}, ${municipality}`;
+
+    }
+
+
+    if (
+        locationText
+    ) {
+
+        locationText +=
+            ", Samar";
+
+    } else {
+
+        locationText =
+            "Samar";
+
+    }
+
+
+    return `
+
+        <article
+            class="destination-card"
+            data-id="${id}"
+            data-category="${category}"
+            data-name="${name}"
+            data-lat="${Number(destination.lat) || ""}"
+            data-lng="${Number(destination.lng) || ""}"
+        >
+
+            <div class="card-photo">
+
+                <img
+                    src="${image}"
+                    alt="${name}"
+                    loading="lazy"
+                >
+
+
+                <span class="category-badge">
+
+                    ${category}
+
+                </span>
+
+
+                <div class="card-top-actions">
+
+                    <button
+                        class="favorite-btn"
+                        type="button"
+                        aria-label="Save destination"
+                    >
+
+                        <i data-lucide="heart"></i>
+
+                    </button>
+
+
+                    <span class="rating-badge">
+
+                        <span class="star">
+                            ★
+                        </span>
+
+                        <b>
+                            ${rating}
+                        </b>
+
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="card-body">
+
+                <h4>
+                    ${name}
+                </h4>
+
+
+                <p class="place">
+
+                    <i data-lucide="map-pin"></i>
+
+                    ${escapeDestinationHTML(locationText)}
+
+                </p>
+
+
+                <p class="description">
+
+                    ${description}
+
+                </p>
+
+
+                <div class="card-footer">
+
+                    <span class="distance">
+
+                        <i data-lucide="navigation"></i>
+
+                        ${distanceText}
+
+                    </span>
+
+
+                    <button
+                        class="details-btn"
+                        type="button"
+                    >
+
+                        View Details
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </article>
+
+    `;
+
+}
+
+
+/* =========================================================
+   RENDER REALTIME DESTINATIONS
+========================================================= */
+
+function renderRealtimeDestinations() {
+
+    if (
+        !destinationGrid
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        realtimeDestinations.length ===
+        0
+    ) {
+
+        destinationGrid.innerHTML = `
+
+            <div
+                style="
+                    grid-column:1/-1;
+                    padding:50px 20px;
+                    text-align:center;
+                    color:#587087;
+                    font-weight:700;
+                "
+            >
+
+                No published destinations yet.
+
+            </div>
+
+        `;
+
+
+        return;
+
+    }
+
+
+    destinationGrid.innerHTML =
+
+        realtimeDestinations
+            .map(
+                createRealtimeDestinationCard
+            )
+            .join(
+                ""
+            );
+
+
+    /* RESTORE LUCIDE ICONS */
+
+    if (
+        window.lucide
+    ) {
+
+        window.lucide
+            .createIcons();
+
+    }
+
+
+    /* RESTORE FAVORITE STATES */
+
+    updateFavoriteButtons();
+
+    updateSavedCount();
+
+
+    /* REAPPLY SEARCH / CATEGORY */
+
+    applyDestinationFilters();
+
+
+    /* UPDATE SAVED PAGE IF OPEN */
+
+    if (
+        page?.classList.contains(
+            "saved-mode"
+        )
+    ) {
+
+        renderSavedPlaces();
+
+    }
+
+}
+
+
+/* =========================================================
+   LISTEN TO PUBLISHED DOT DESTINATIONS
+========================================================= */
+
+function startRealtimeDestinationListener() {
+
+    const publishedQuery =
+        query(
+
+            collection(
+                db,
+                "destinations"
+            ),
+
+            where(
+                "status",
+                "==",
+                "Published"
+            )
+
+        );
+
+
+    onSnapshot(
+
+        publishedQuery,
+
+        snapshot => {
+
+            realtimeDestinations =
+                snapshot.docs
+                    .map(
+                        documentSnapshot => ({
+
+                            id:
+                                documentSnapshot.id,
+
+                            ...documentSnapshot.data()
+
+                        })
+                    );
+
+
+            /* =========================================
+               NEWEST DESTINATION FIRST
+            ========================================= */
+
+            realtimeDestinations.sort(
+                (
+                    first,
+                    second
+                ) => {
+
+                    const firstTime =
+                        first.createdAt
+                            ?.toMillis?.()
+                        ||
+                        first.updatedAt
+                            ?.toMillis?.()
+                        ||
+                        0;
+
+
+                    const secondTime =
+                        second.createdAt
+                            ?.toMillis?.()
+                        ||
+                        second.updatedAt
+                            ?.toMillis?.()
+                        ||
+                        0;
+
+
+                    return (
+                        secondTime -
+                        firstTime
+                    );
+
+                }
+            );
+
+
+            console.log(
+                "Realtime published destinations:",
+                realtimeDestinations
+            );
+
+
+            renderRealtimeDestinations();
+
+        },
+
+        error => {
+
+            console.error(
+                "DESTINATION FIRESTORE ERROR:",
+                error
+            );
+
+
+            if (
+                destinationGrid
+            ) {
+
+                destinationGrid.innerHTML = `
+
+                    <div
+                        style="
+                            grid-column:1/-1;
+                            padding:40px;
+                            text-align:center;
+                            color:#d33838;
+                            font-weight:700;
+                        "
+                    >
+
+                        Unable to load destinations.
+
+                    </div>
+
+                `;
+
+            }
+
+        }
+
+    );
+
+}
+
+
+/* =========================================================
+   START REALTIME DESTINATIONS
+========================================================= */
+
+startRealtimeDestinationListener();
 
 /* =========================================================
    FIREBASE AUTHENTICATION
@@ -2763,61 +3416,62 @@ function applyDestinationFilters() {
         || "";
 
 
-    destinationCards.forEach(card => {
+    getDestinationCards()
+        .forEach(card => {
 
-        const category =
-            card.dataset.category || "";
+            const category =
+                card.dataset.category || "";
 
-        const destinationName =
-            card.dataset.name
-                ?.toLowerCase()
-            || "";
+            const destinationName =
+                card.dataset.name
+                    ?.toLowerCase()
+                || "";
 
-        const location =
-            card.querySelector(".place")
-                ?.textContent
-                .toLowerCase()
-            || "";
+            const location =
+                card.querySelector(".place")
+                    ?.textContent
+                    .toLowerCase()
+                || "";
 
-        const description =
-            card.querySelector(".description")
-                ?.textContent
-                .toLowerCase()
-            || "";
-
-
-        const matchesCategory =
-            activeCategory === "All"
-            ||
-            category === activeCategory;
+            const description =
+                card.querySelector(".description")
+                    ?.textContent
+                    .toLowerCase()
+                || "";
 
 
-        const matchesSearch =
-            searchTerm === ""
-            ||
-            destinationName.includes(searchTerm)
-            ||
-            location.includes(searchTerm)
-            ||
-            description.includes(searchTerm)
-            ||
-            category
-                .toLowerCase()
-                .includes(searchTerm);
+            const matchesCategory =
+                activeCategory === "All"
+                ||
+                category === activeCategory;
 
 
-        const isMatch =
-            matchesCategory
-            &&
-            matchesSearch;
+            const matchesSearch =
+                searchTerm === ""
+                ||
+                destinationName.includes(searchTerm)
+                ||
+                location.includes(searchTerm)
+                ||
+                description.includes(searchTerm)
+                ||
+                category
+                    .toLowerCase()
+                    .includes(searchTerm);
 
 
-        card.classList.toggle(
-            "hidden",
-            !isMatch
-        );
+            const isMatch =
+                matchesCategory
+                &&
+                matchesSearch;
 
-    });
+
+            card.classList.toggle(
+                "hidden",
+                !isMatch
+            );
+
+        });
 
 }
 
@@ -3273,29 +3927,74 @@ function toggleSavedPlace(card) {
 
 }
 
-favoriteButtons.forEach(button => {
+/* =========================================================
+   DYNAMIC FAVORITE BUTTONS
+========================================================= */
 
-    button.addEventListener(
-        "click",
-        event => {
+document.addEventListener(
+    "click",
+    event => {
 
-            event.stopPropagation();
-
-
-            const card =
-                button.closest(
-                    ".destination-card"
-                );
-
-
-            toggleSavedPlace(
-                card
+        const favoriteButton =
+            event.target.closest(
+                ".favorite-btn"
             );
 
-        }
-    );
 
-});
+        if (
+            !favoriteButton
+        ) {
+
+            return;
+
+        }
+
+
+        event.stopPropagation();
+
+
+        const card =
+            favoriteButton.closest(
+                ".destination-card"
+            );
+
+
+        if (
+            !card
+        ) {
+
+            return;
+
+        }
+
+
+        toggleSavedPlace(
+            card
+        );
+
+
+        /*
+           If heart was clicked
+           inside Saved page,
+           immediately refresh Saved.
+        */
+
+        if (
+            card.closest(
+                "#savedGrid"
+            )
+        ) {
+
+            renderSavedPlaces();
+
+        }
+
+    }
+);
+
+/* =========================================================
+   RENDER SAVED PLACES
+========================================================= */
 
 function renderSavedPlaces() {
 
@@ -3307,86 +4006,79 @@ function renderSavedPlaces() {
         "";
 
 
-    savedPlaces.forEach(placeId => {
+    savedPlaces.forEach(
+        placeId => {
 
-        const originalCard =
-            document.querySelector(
-                `.featured-section .destination-card[data-id="${placeId}"]`
+            const originalCard =
+                document.querySelector(
+                    `.featured-section .destination-card[data-id="${placeId}"]`
+                );
+
+
+            if (
+                !originalCard
+            ) {
+
+                return;
+
+            }
+
+
+            const clonedCard =
+                originalCard.cloneNode(
+                    true
+                );
+
+
+            clonedCard.classList.remove(
+                "hidden"
             );
 
 
-        if (!originalCard) {
-            return;
+            savedGrid.appendChild(
+                clonedCard
+            );
+
         }
+    );
 
 
-        const clonedCard =
-            originalCard.cloneNode(true);
-
-
-        clonedCard.classList.remove(
-            "hidden"
-        );
-
-
-        savedGrid.appendChild(
-            clonedCard
-        );
-
-    });
-
+    /* =========================================
+       SHOW EMPTY MESSAGE
+    ========================================= */
 
     savedEmpty.hidden =
-        savedPlaces.length !== 0;
+        savedGrid.children.length !==
+        0;
 
+
+    /* =========================================
+       UPDATE SAVED COUNTS
+    ========================================= */
 
     updateSavedCount();
 
 
-    lucide.createIcons();
-
-
-    /*
-      HEART BUTTONS INSIDE
-      THE CLONED SAVED CARDS
-    */
-
-    savedGrid
-        .querySelectorAll(
-            ".favorite-btn"
-        )
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                event => {
-
-                    event.stopPropagation();
-
-
-                    const card =
-                        button.closest(
-                            ".destination-card"
-                        );
-
-
-                    toggleSavedPlace(
-                        card
-                    );
-
-
-                    renderSavedPlaces();
-
-                }
-            );
-
-        });
-
+    /* =========================================
+       RESTORE HEART STATES
+    ========================================= */
 
     updateFavoriteButtons();
 
-}
 
+    /* =========================================
+       RESTORE LUCIDE ICONS
+    ========================================= */
+
+    if (
+        window.lucide
+    ) {
+
+        window.lucide.createIcons();
+
+    }
+
+}
 savedNavButton?.addEventListener(
     "click",
     () => {
