@@ -1,16 +1,6 @@
 
-import {
-    auth,
-    db
-} from "./firebase-config.js";
-
-
-import {
-    collection,
-    query,
-    where,
-    onSnapshot
-} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { auth, db } from "./firebase-config.js";
+import { collection, query, where, onSnapshot, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import {
     createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut,
     setPersistence,
@@ -226,6 +216,17 @@ let realtimeDestinations =
 let realtimeDestinationsLoaded =
     false;
 
+let realtimeRatings =
+    [];
+
+
+let activeComments =
+    [];
+
+
+let activeCommentsUnsubscribe =
+    null;
+
 
 /* =========================================================
    ESCAPE HTML
@@ -258,6 +259,21 @@ function escapeDestinationHTML(
             "'",
             "&#039;"
         );
+
+}
+
+/* =========================================================
+   GENERAL HTML ESCAPE
+   USED BY COMMENTS + PROFILE PHOTOS
+========================================================= */
+
+function escapeHTML(
+    value
+) {
+
+    return escapeDestinationHTML(
+        value
+    );
 
 }
 
@@ -435,12 +451,35 @@ function createRealtimeDestinationCard(
         );
 
 
-    const ratingNumber =
+    /* =====================================================
+   REALTIME COMMUNITY RATING
+===================================================== */
+
+    const ratingStats =
+        getRatingStatsForPlace(
+            destination.id
+        );
+
+
+    const oldRating =
         Number(
             destination.rating
             ||
             0
         );
+
+
+    const ratingNumber =
+        ratingStats.count >
+            0
+
+            ?
+
+            ratingStats.average
+
+            :
+
+            oldRating;
 
 
     const rating =
@@ -449,10 +488,9 @@ function createRealtimeDestinationCard(
 
             ?
 
-            ratingNumber
-                .toFixed(
-                    1
-                )
+            ratingNumber.toFixed(
+                1
+            )
 
             :
 
@@ -2654,6 +2692,20 @@ onAuthStateChanged(
             user
         );
 
+        /* =========================================
+   UPDATE OPEN DETAILS AUTH STATE
+========================================= */
+
+        if (
+            activeDetailsPlaceId
+        ) {
+
+            renderYourRating();
+
+            updateCommentComposerIdentity();
+
+        }
+
 
         if (user) {
 
@@ -4358,206 +4410,730 @@ browseDestinationsButton?.addEventListener(
 
     }
 );
-
-/* =========================================
-   PLACE RATINGS
-========================================= */
-
-function getPlaceRatings() {
-
-    try {
-
-        return JSON.parse(
-            localStorage.getItem(
-                RATINGS_STORAGE_KEY
-            )
-        ) || {};
-
-    } catch {
-
-        return {};
-
-    }
-
-}
+/* =========================================================
+   REALTIME FIRESTORE RATINGS
+========================================================= */
 
 
-function savePlaceRatings(ratings) {
+/* =========================================================
+   GET RATING STATISTICS
+========================================================= */
 
-    localStorage.setItem(
-        RATINGS_STORAGE_KEY,
-        JSON.stringify(ratings)
-    );
-
-}
-
-
-function getPlaceRating(placeId) {
-
-    const ratings =
-        getPlaceRatings();
-
-    return ratings[placeId] || 0;
-
-}
-
-
-function setPlaceRating(
-    placeId,
-    rating
-) {
-
-    const ratings =
-        getPlaceRatings();
-
-    ratings[placeId] =
-        rating;
-
-    savePlaceRatings(
-        ratings
-    );
-
-}
-
-/* =========================================
-   PLACE COMMENTS
-========================================= */
-
-function getPlaceComments() {
-
-    try {
-
-        return JSON.parse(
-            localStorage.getItem(
-                COMMENTS_STORAGE_KEY
-            )
-        ) || {};
-
-    } catch {
-
-        return {};
-
-    }
-
-}
-
-
-function savePlaceComments(comments) {
-
-    localStorage.setItem(
-        COMMENTS_STORAGE_KEY,
-        JSON.stringify(comments)
-    );
-
-}
-
-
-function getCommentsForPlace(
+function getRatingStatsForPlace(
     placeId
 ) {
 
-    const comments =
-        getPlaceComments();
+    const ratings =
+        realtimeRatings.filter(
+            item =>
+                item.destinationId ===
+                placeId
+        );
 
-    return comments[placeId] || [];
+
+    if (
+        ratings.length ===
+        0
+    ) {
+
+        return {
+
+            average:
+                0,
+
+            count:
+                0
+
+        };
+
+    }
+
+
+    const total =
+        ratings.reduce(
+            (
+                sum,
+                item
+            ) => {
+
+                const value =
+                    Number(
+                        item.rating
+                    );
+
+
+                return sum +
+                    (
+                        Number.isFinite(
+                            value
+                        )
+
+                            ?
+
+                            value
+
+                            :
+
+                            0
+                    );
+
+            },
+            0
+        );
+
+
+    return {
+
+        average:
+            total /
+            ratings.length,
+
+        count:
+            ratings.length
+
+    };
 
 }
 
-function escapeHTML(value) {
 
-    return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+/* =========================================================
+   GET CURRENT USER'S RATING
+========================================================= */
 
-}
+function getCurrentUserRating(
+    placeId
+) {
 
-function renderYourRating() {
+    const user =
+        auth.currentUser;
 
-    if (!activeDetailsPlaceId) {
-        return;
+
+    if (
+        !user
+    ) {
+
+        return 0;
+
     }
 
 
     const rating =
-        getPlaceRating(
+        realtimeRatings.find(
+            item =>
+                item.destinationId ===
+                placeId
+                &&
+                item.userId ===
+                user.uid
+        );
+
+
+    return Number(
+        rating?.rating
+        ||
+        0
+    );
+
+}
+
+
+/* =========================================================
+   UPDATE AVERAGE RATING IN DETAILS
+========================================================= */
+
+function renderActiveDestinationAverageRating() {
+
+    if (
+        !activeDetailsPlaceId
+    ) {
+
+        return;
+
+    }
+
+
+    const stats =
+        getRatingStatsForPlace(
             activeDetailsPlaceId
         );
 
 
-    rateStars.forEach(star => {
+    detailsRating.textContent =
+        stats.count >
+            0
 
-        const starValue =
-            Number(
-                star.dataset.rating
-            );
+            ?
 
+            stats.average.toFixed(
+                1
+            )
 
-        star.classList.toggle(
-            "active",
-            starValue <= rating
-        );
+            :
 
-    });
-
-
-    if (rating === 0) {
-
-        yourRatingText.textContent =
-            "Not rated";
-
-    } else {
-
-        yourRatingText.textContent =
-            `${rating}/5`;
-
-    }
+            "New";
 
 }
 
-rateStars.forEach(star => {
 
-    star.addEventListener(
-        "click",
-        () => {
+/* =========================================================
+   SHOW CURRENT USER'S RATING
+========================================================= */
 
-            if (!activeDetailsPlaceId) {
-                return;
+function renderYourRating() {
+
+    if (
+        !activeDetailsPlaceId
+    ) {
+
+        return;
+
+    }
+
+
+    const user =
+        auth.currentUser;
+
+
+    if (
+        !user
+    ) {
+
+        rateStars.forEach(
+            star => {
+
+                star.classList.remove(
+                    "active"
+                );
+
             }
+        );
 
 
-            const rating =
+        yourRatingText.textContent =
+            "Sign in to rate";
+
+
+        return;
+
+    }
+
+
+    const rating =
+        getCurrentUserRating(
+            activeDetailsPlaceId
+        );
+
+
+    rateStars.forEach(
+        star => {
+
+            const starValue =
                 Number(
                     star.dataset.rating
                 );
 
 
-            setPlaceRating(
-                activeDetailsPlaceId,
+            star.classList.toggle(
+
+                "active",
+
+                starValue <=
                 rating
+
             );
-
-
-            renderYourRating();
 
         }
     );
 
-});
 
-function renderComments() {
+    yourRatingText.textContent =
+        rating >
+            0
 
-    if (!activeDetailsPlaceId) {
+            ?
+
+            `${rating}/5`
+
+            :
+
+            "Not rated";
+
+}
+
+
+/* =========================================================
+   SAVE / UPDATE USER RATING
+========================================================= */
+
+async function saveRealtimeRating(
+    placeId,
+    rating
+) {
+
+    const user =
+        auth.currentUser;
+
+
+    if (
+        !user
+    ) {
+
+        showSignIn();
+
+        openAuthModal();
+
         return;
+
     }
 
 
-    const comments =
-        getCommentsForPlace(
-            activeDetailsPlaceId
+    if (
+        !placeId
+        ||
+        rating <
+        1
+        ||
+        rating >
+        5
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       One document per user + destination.
+
+       If the user changes 3 stars to 5 stars,
+       the same document is updated instead
+       of creating another rating.
+    */
+
+    const ratingId =
+        `${placeId}_${user.uid}`;
+
+
+    await setDoc(
+
+        doc(
+            db,
+            "destinationRatings",
+            ratingId
+        ),
+
+        {
+
+            destinationId:
+                placeId,
+
+            userId:
+                user.uid,
+
+            userName:
+                user.displayName
+                ||
+                user.email
+                ||
+                "Traveler",
+
+            rating:
+                rating,
+
+            updatedAt:
+                serverTimestamp()
+
+        },
+
+        {
+            merge:
+                true
+        }
+
+    );
+
+}
+
+
+/* =========================================================
+   STAR CLICK
+========================================================= */
+
+rateStars.forEach(
+    star => {
+
+        star.addEventListener(
+            "click",
+            async () => {
+
+                if (
+                    !activeDetailsPlaceId
+                ) {
+
+                    return;
+
+                }
+
+
+                const rating =
+                    Number(
+                        star.dataset.rating
+                    );
+
+
+                try {
+
+                    yourRatingText.textContent =
+                        "Saving...";
+
+
+                    await saveRealtimeRating(
+
+                        activeDetailsPlaceId,
+
+                        rating
+
+                    );
+
+
+                    /*
+                       No manual rendering needed.
+                       Firestore onSnapshot will update it.
+                    */
+
+                } catch (
+                error
+                ) {
+
+                    console.error(
+                        "RATING ERROR:",
+                        error
+                    );
+
+
+                    yourRatingText.textContent =
+                        "Unable to save";
+
+                }
+
+            }
         );
+
+    }
+);
+
+
+/* =========================================================
+   REALTIME RATINGS LISTENER
+========================================================= */
+
+function startRealtimeRatingsListener() {
+
+    onSnapshot(
+
+        collection(
+            db,
+            "destinationRatings"
+        ),
+
+        snapshot => {
+
+            realtimeRatings =
+                snapshot.docs.map(
+                    documentSnapshot => ({
+
+                        id:
+                            documentSnapshot.id,
+
+                        ...documentSnapshot.data()
+
+                    })
+                );
+
+
+            /* =========================================
+               UPDATE DESTINATION CARDS
+            ========================================= */
+
+            if (
+                realtimeDestinationsLoaded
+            ) {
+
+                renderRealtimeDestinations();
+
+            }
+
+
+            /* =========================================
+               UPDATE OPEN DETAILS WINDOW
+            ========================================= */
+
+            if (
+                activeDetailsPlaceId
+            ) {
+
+                renderYourRating();
+
+                renderActiveDestinationAverageRating();
+
+            }
+
+        },
+
+        error => {
+
+            console.error(
+                "RATINGS LISTENER ERROR:",
+                error
+            );
+
+        }
+
+    );
+
+}
+
+
+/* =========================================================
+   COMMENT HELPERS
+========================================================= */
+
+function getInitialsFromName(
+    name
+) {
+
+    const cleaned =
+        String(
+            name
+            ||
+            "Traveler"
+        )
+            .trim();
+
+
+    const parts =
+        cleaned
+            .split(
+                /\s+/
+            )
+            .filter(
+                Boolean
+            );
+
+
+    if (
+        parts.length ===
+        0
+    ) {
+
+        return "T";
+
+    }
+
+
+    if (
+        parts.length ===
+        1
+    ) {
+
+        return parts[0]
+            .charAt(
+                0
+            )
+            .toUpperCase();
+
+    }
+
+
+    return (
+
+        parts[0]
+            .charAt(
+                0
+            )
+
+        +
+
+        parts[
+            parts.length -
+            1
+        ]
+            .charAt(
+                0
+            )
+
+    )
+        .toUpperCase();
+
+}
+
+
+/* =========================================================
+   COMMENT DATE
+========================================================= */
+
+function formatCommentDate(
+    timestamp
+) {
+
+    if (
+        !timestamp
+        ||
+        typeof timestamp.toDate !==
+        "function"
+    ) {
+
+        return "Just now";
+
+    }
+
+
+    return timestamp
+        .toDate()
+        .toLocaleString(
+            "en-US",
+            {
+
+                month:
+                    "short",
+
+                day:
+                    "numeric",
+
+                year:
+                    "numeric",
+
+                hour:
+                    "numeric",
+
+                minute:
+                    "2-digit"
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   UPDATE COMMENT COMPOSER USER
+========================================================= */
+
+/* =========================================================
+   UPDATE COMMENT COMPOSER USER
+   GOOGLE PHOTO + INITIALS FALLBACK
+========================================================= */
+
+function updateCommentComposerIdentity() {
+
+    const composerAvatar =
+        document.querySelector(
+            ".comment-avatar"
+        );
+
+
+    if (
+        !composerAvatar
+    ) {
+
+        return;
+
+    }
+
+
+    const user =
+        auth.currentUser;
+
+
+    /* =====================================================
+       LOGGED OUT
+    ===================================================== */
+
+    if (
+        !user
+    ) {
+
+        composerAvatar.innerHTML =
+            "?";
+
+
+        commentInput.placeholder =
+            "Sign in to write a comment...";
+
+
+        return;
+
+    }
+
+
+    const name =
+        user.displayName
+        ||
+        user.email
+        ||
+        "Traveler";
+
+
+    const profilePhoto =
+        user.photoURL
+        ||
+        "";
+
+
+    /* =====================================================
+       GOOGLE / GMAIL PROFILE PHOTO
+    ===================================================== */
+
+    if (
+        profilePhoto
+    ) {
+
+        composerAvatar.innerHTML = `
+
+            <img
+                src="${escapeHTML(profilePhoto)}"
+                alt="${escapeHTML(name)}"
+                referrerpolicy="no-referrer"
+            >
+
+        `;
+
+    }
+
+
+    /* =====================================================
+       NO GOOGLE PHOTO -> INITIALS
+    ===================================================== */
+
+    else {
+
+        composerAvatar.textContent =
+            getInitialsFromName(
+                name
+            );
+
+    }
+
+
+    commentInput.placeholder =
+        "Write a comment...";
+
+}
+
+
+/* =========================================================
+   RENDER COMMENTS
+========================================================= */
+
+function renderComments() {
+
+    if (
+        !activeDetailsPlaceId
+    ) {
+
+        return;
+
+    }
 
 
     commentsList.innerHTML =
@@ -4565,33 +5141,101 @@ function renderComments() {
 
 
     commentCount.textContent =
-        `${comments.length} ${comments.length === 1
-            ? "comment"
-            : "comments"
+        `${activeComments.length} ${activeComments.length ===
+            1
+
+            ?
+
+            "comment"
+
+            :
+
+            "comments"
         }`;
 
 
-    comments
-        .slice()
-        .reverse()
-        .forEach(comment => {
+    if (
+        activeComments.length ===
+        0
+    ) {
+
+        commentsList.innerHTML = `
+
+            <div
+                style="
+                    padding:22px 10px;
+                    text-align:center;
+                    color:#587087;
+                    font-size:13px;
+                "
+            >
+
+                No comments yet. Be the first to comment.
+
+            </div>
+
+        `;
+
+
+        return;
+
+    }
+
+
+    activeComments.forEach(
+        comment => {
 
             const item =
                 document.createElement(
                     "div"
                 );
 
+
             item.className =
                 "comment-item";
+
+
+            const author =
+                comment.userName
+                ||
+                "Traveler";
+
+
+            const initials =
+                getInitialsFromName(
+                    author
+                );
+
+            const profilePhoto =
+                comment.userPhoto
+                ||
+                "";
 
 
             item.innerHTML = `
 
                 <div
-                    class="comment-item-avatar"
+    class="comment-item-avatar"
+>
+
+    ${profilePhoto
+
+                    ?
+
+                    `
+                <img
+                    src="${escapeHTML(profilePhoto)}"
+                    alt="${escapeHTML(author)}"
+                    referrerpolicy="no-referrer"
                 >
-                    JR
-                </div>
+            `
+
+                    :
+
+                    escapeHTML(initials)
+                }
+
+</div>
 
 
                 <div>
@@ -4603,21 +5247,37 @@ function renderComments() {
                         <span
                             class="comment-author"
                         >
-                            JR
+
+                            ${escapeHTML(author)}
+
                         </span>
+
 
                         <p
                             class="comment-text"
                         >
-                            ${escapeHTML(comment.text)}
+
+                            ${escapeHTML(
+                    comment.text
+                    ||
+                    ""
+                )}
+
                         </p>
 
                     </div>
 
+
                     <div
                         class="comment-meta"
                     >
-                        ${escapeHTML(comment.date)}
+
+                        ${escapeHTML(
+                    formatCommentDate(
+                        comment.createdAt
+                    )
+                )}
+
                     </div>
 
                 </div>
@@ -4629,14 +5289,177 @@ function renderComments() {
                 item
             );
 
-        });
+        }
+    );
 
 }
 
-function submitComment() {
 
-    if (!activeDetailsPlaceId) {
+/* =========================================================
+   REALTIME COMMENTS LISTENER
+========================================================= */
+
+function startRealtimeCommentsListener(
+    placeId
+) {
+
+    /* =========================================
+       STOP PREVIOUS DESTINATION LISTENER
+    ========================================= */
+
+    if (
+        activeCommentsUnsubscribe
+    ) {
+
+        activeCommentsUnsubscribe();
+
+        activeCommentsUnsubscribe =
+            null;
+
+    }
+
+
+    activeComments =
+        [];
+
+
+    renderComments();
+
+
+    const commentsQuery =
+        query(
+
+            collection(
+                db,
+                "destinationComments"
+            ),
+
+            where(
+                "destinationId",
+                "==",
+                placeId
+            )
+
+        );
+
+
+    activeCommentsUnsubscribe =
+        onSnapshot(
+
+            commentsQuery,
+
+            snapshot => {
+
+                /*
+                   If the user changed destination
+                   before this snapshot arrived,
+                   ignore it.
+                */
+
+                if (
+                    activeDetailsPlaceId !==
+                    placeId
+                ) {
+
+                    return;
+
+                }
+
+
+                activeComments =
+                    snapshot.docs
+                        .map(
+                            documentSnapshot => ({
+
+                                id:
+                                    documentSnapshot.id,
+
+                                ...documentSnapshot.data()
+
+                            })
+                        );
+
+
+                /* =========================================
+                   NEWEST COMMENT FIRST
+                ========================================= */
+
+                activeComments.sort(
+                    (
+                        first,
+                        second
+                    ) => {
+
+                        const firstTime =
+                            first.createdAt
+                                ?.toMillis?.()
+                            ||
+                            0;
+
+
+                        const secondTime =
+                            second.createdAt
+                                ?.toMillis?.()
+                            ||
+                            0;
+
+
+                        return (
+                            secondTime -
+                            firstTime
+                        );
+
+                    }
+                );
+
+
+                renderComments();
+
+            },
+
+            error => {
+
+                console.error(
+                    "COMMENTS LISTENER ERROR:",
+                    error
+                );
+
+            }
+
+        );
+
+}
+
+
+/* =========================================================
+   SUBMIT COMMENT
+========================================================= */
+
+async function submitComment() {
+
+    if (
+        !activeDetailsPlaceId
+    ) {
+
         return;
+
+    }
+
+
+    const user =
+        auth.currentUser;
+
+
+    if (
+        !user
+    ) {
+
+        showSignIn();
+
+        openAuthModal();
+
+        return;
+
     }
 
 
@@ -4645,7 +5468,9 @@ function submitComment() {
             .trim();
 
 
-    if (!text) {
+    if (
+        !text
+    ) {
 
         commentInput.focus();
 
@@ -4654,109 +5479,184 @@ function submitComment() {
     }
 
 
-    const allComments =
-        getPlaceComments();
+    try {
+
+        commentSubmitButton.disabled =
+            true;
 
 
-    if (
-        !allComments[
-        activeDetailsPlaceId
-        ]
+        const userName =
+            user.displayName
+            ||
+            user.email
+                ?.split(
+                    "@"
+                )[0]
+            ||
+            "Traveler";
+
+
+        await addDoc(
+
+            collection(
+                db,
+                "destinationComments"
+            ),
+
+            {
+
+                destinationId:
+                    activeDetailsPlaceId,
+
+                userId:
+                    user.uid,
+
+                userName:
+                    userName,
+
+                userPhoto:
+                    user.photoURL
+                    ||
+                    "",
+
+                text:
+                    text,
+
+                createdAt:
+                    serverTimestamp()
+
+            }
+
+        );
+
+
+        commentInput.value =
+            "";
+
+
+        commentInput.focus();
+
+
+        /*
+           Do NOT manually add the comment.
+
+           onSnapshot() will receive it and
+           render it automatically.
+        */
+
+
+    } catch (
+    error
     ) {
 
-        allComments[
-            activeDetailsPlaceId
-        ] = [];
+        console.error(
+            "COMMENT ERROR:",
+            error
+        );
+
+    } finally {
+
+        commentSubmitButton.disabled =
+            false;
 
     }
-
-
-    allComments[
-        activeDetailsPlaceId
-    ].push({
-
-        id:
-            Date.now(),
-
-        text:
-            text,
-
-        date:
-            new Date()
-                .toLocaleString()
-
-    });
-
-
-    savePlaceComments(
-        allComments
-    );
-
-
-    commentInput.value =
-        "";
-
-
-    renderComments();
 
 }
 
-commentSubmitButton?.addEventListener(
-    "click",
-    submitComment
-);
 
-commentInput?.addEventListener(
-    "keydown",
-    event => {
+/* =========================================================
+   COMMENT POST BUTTON
+========================================================= */
 
-        if (
-            event.key === "Enter"
-            &&
-            event.ctrlKey
-        ) {
+commentSubmitButton
+    ?.addEventListener(
+        "click",
+        submitComment
+    );
 
-            event.preventDefault();
 
-            submitComment();
+/* =========================================================
+   CTRL + ENTER TO POST
+========================================================= */
+
+commentInput
+    ?.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key ===
+                "Enter"
+                &&
+                event.ctrlKey
+            ) {
+
+                event.preventDefault();
+
+                submitComment();
+
+            }
 
         }
+    );
 
-    }
-);
+
+/* =========================================================
+   START GLOBAL REALTIME RATINGS
+========================================================= */
+
+startRealtimeRatingsListener();
+
+/* =========================================================
+   OPEN DESTINATION DETAILS
+========================================================= */
 
 function openDestinationDetails(
     card
 ) {
 
-    if (!card) {
+    if (
+        !card
+    ) {
+
         return;
+
     }
 
 
     const placeId =
         card.dataset.id;
 
+
     const category =
-        card.dataset.category || "";
+        card.dataset.category
+        ||
+        "";
+
 
     const name =
-        card.dataset.name || "";
+        card.dataset.name
+        ||
+        "";
+
 
     const image =
         card.querySelector(
             ".card-photo img"
         );
 
+
     const location =
         card.querySelector(
             ".place"
         );
 
+
     const description =
         card.querySelector(
             ".description"
         );
+
 
     const rating =
         card.querySelector(
@@ -4764,17 +5664,32 @@ function openDestinationDetails(
         );
 
 
-    if (!placeId) {
+    if (
+        !placeId
+    ) {
+
         return;
+
     }
 
+
+    /* =====================================================
+       ACTIVE DESTINATION
+    ===================================================== */
 
     activeDetailsPlaceId =
         placeId;
 
 
+    /* =====================================================
+       BASIC DESTINATION DETAILS
+    ===================================================== */
+
     detailsImage.src =
-        image?.src || "";
+        image?.src
+        ||
+        "";
+
 
     detailsImage.alt =
         name;
@@ -4789,31 +5704,36 @@ function openDestinationDetails(
 
 
     detailsLocation.textContent =
-        location?.textContent
+        location
+            ?.textContent
             .trim()
-        || "";
+        ||
+        "";
 
 
     detailsDescription.textContent =
-        description?.textContent
+        description
+            ?.textContent
             .trim()
-        || "";
+        ||
+        "";
 
 
     detailsRating.textContent =
-        rating?.textContent
+        rating
+            ?.textContent
             .trim()
-        || "—";
+        ||
+        "New";
 
 
     commentInput.value =
         "";
 
 
-    renderYourRating();
-
-    renderComments();
-
+    /* =====================================================
+       OPEN MODAL FIRST
+    ===================================================== */
 
     detailsModal.hidden =
         false;
@@ -4824,7 +5744,81 @@ function openDestinationDetails(
     );
 
 
-    lucide.createIcons();
+    /* =====================================================
+       REALTIME RATINGS
+    ===================================================== */
+
+    try {
+
+        renderYourRating();
+
+        renderActiveDestinationAverageRating();
+
+    } catch (
+    error
+    ) {
+
+        console.error(
+            "DETAILS RATING ERROR:",
+            error
+        );
+
+    }
+
+
+    /* =====================================================
+       COMMENT PROFILE
+    ===================================================== */
+
+    try {
+
+        updateCommentComposerIdentity();
+
+    } catch (
+    error
+    ) {
+
+        console.error(
+            "COMMENT PROFILE ERROR:",
+            error
+        );
+
+    }
+
+
+    /* =====================================================
+       REALTIME COMMENTS
+    ===================================================== */
+
+    try {
+
+        startRealtimeCommentsListener(
+            placeId
+        );
+
+    } catch (
+    error
+    ) {
+
+        console.error(
+            "COMMENTS START ERROR:",
+            error
+        );
+
+    }
+
+
+    /* =====================================================
+       RESTORE ICONS
+    ===================================================== */
+
+    if (
+        window.lucide
+    ) {
+
+        window.lucide.createIcons();
+
+    }
 
 }
 
@@ -5045,6 +6039,26 @@ function closeDestinationDetails() {
     document.body.classList.remove(
         "details-modal-open"
     );
+
+
+    /* =====================================================
+       STOP REALTIME COMMENTS LISTENER
+    ===================================================== */
+
+    if (
+        activeCommentsUnsubscribe
+    ) {
+
+        activeCommentsUnsubscribe();
+
+        activeCommentsUnsubscribe =
+            null;
+
+    }
+
+
+    activeComments =
+        [];
 
 
     activeDetailsPlaceId =
