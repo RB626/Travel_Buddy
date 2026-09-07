@@ -224,6 +224,17 @@ let realtimeDestinationsLoaded =
 let realtimeRatings =
     [];
 
+let cloudSavedPlaceIds =
+    [];
+
+
+let savedPlacesUnsubscribe =
+    null;
+
+
+let savedPlacesLoaded =
+    false;
+
 
 let activeComments =
     [];
@@ -2746,8 +2757,9 @@ function startRealtimeDestinationListener() {
                         first.createdAt
                             ?.toMillis?.()
                         ||
-                        first.updatedAt
-                            ?.toMillis?.()
+                        Number(
+                            first.clientCreatedAt
+                        )
                         ||
                         0;
 
@@ -2756,8 +2768,9 @@ function startRealtimeDestinationListener() {
                         second.createdAt
                             ?.toMillis?.()
                         ||
-                        second.updatedAt
-                            ?.toMillis?.()
+                        Number(
+                            second.clientCreatedAt
+                        )
                         ||
                         0;
 
@@ -4633,47 +4646,13 @@ onAuthStateChanged(
             user
         );
 
-        startTravelerNotificationListeners(
+        startRealtimeSavedPlacesListener(
             user
         );
 
-        /* =========================================
-   SWITCH SAVED PLACES TO THIS ACCOUNT
-========================================= */
-
-        updateFavoriteButtons();
-
-        updateSavedCount();
-
-
-        /* =========================================
-           REFRESH SAVED PAGE
-        ========================================= */
-
-        if (
-            page?.classList.contains(
-                "saved-mode"
-            )
-        ) {
-
-            renderSavedPlaces();
-
-        }
-
-
-        /* =========================================
-           REFRESH SAVED MAP MARKERS
-        ========================================= */
-
-        if (
-            travelMap
-        ) {
-
-            refreshTravelMapMarkers(
-                false
-            );
-
-        }
+        startTravelerNotificationListeners(
+            user
+        );
 
         /* =========================================
    UPDATE OPEN DETAILS AUTH STATE
@@ -5885,99 +5864,31 @@ document.addEventListener(
 );
 
 /* =========================================================
-   SAVED PLACES — SEPARATE FOR EACH FIREBASE ACCOUNT
-========================================================= */
-
-function getSavedStorageKey() {
-
-    const user =
-        auth.currentUser;
-
-
-    /* =========================================
-       NO USER = NO ACCOUNT SAVED STORAGE
-    ========================================= */
-
-    if (
-        !user
-    ) {
-
-        return null;
-
-    }
-
-
-    /*
-       Example:
-
-       travelBuddySavedPlaces_abcFirebaseUID123
-    */
-
-    return `${SAVED_STORAGE_KEY}_${user.uid}`;
-
-}
-
-
-/* =========================================================
-   GET CURRENT USER'S SAVED PLACES
+   CLOUD SAVED PLACES
 ========================================================= */
 
 function getSavedPlaces() {
 
-    const storageKey =
-        getSavedStorageKey();
-
-
-    if (
-        !storageKey
-    ) {
-
-        return [];
-
-    }
-
-
-    try {
-
-        return JSON.parse(
-
-            localStorage.getItem(
-                storageKey
-            )
-
-        ) || [];
-
-    } catch (
-    error
-    ) {
-
-        console.error(
-            "SAVED PLACES READ ERROR:",
-            error
-        );
-
-
-        return [];
-
-    }
+    return [
+        ...cloudSavedPlaceIds
+    ];
 
 }
 
 
 /* =========================================================
-   SAVE CURRENT USER'S SAVED PLACES
+   MIGRATE OLD LOCAL SAVED PLACES ONCE
+
+   This preserves favorites that existed before
+   switching to Firestore.
 ========================================================= */
 
-function saveSavedPlaces(
-    savedPlaces
+async function migrateOldSavedPlacesToFirestore(
+    user
 ) {
 
-    const storageKey =
-        getSavedStorageKey();
-
-
     if (
-        !storageKey
+        !user
     ) {
 
         return;
@@ -5985,21 +5896,284 @@ function saveSavedPlaces(
     }
 
 
-    localStorage.setItem(
+    const oldStorageKey =
+        `${SAVED_STORAGE_KEY}_${user.uid}`;
 
-        storageKey,
 
-        JSON.stringify(
-            savedPlaces
-        )
+    const migrationKey =
+        `${SAVED_STORAGE_KEY}_cloudMigrated_${user.uid}`;
 
+
+    if (
+        localStorage.getItem(
+            migrationKey
+        ) ===
+        "1"
+    ) {
+
+        return;
+
+    }
+
+
+    let oldSavedPlaces =
+        [];
+
+
+    try {
+
+        oldSavedPlaces =
+            JSON.parse(
+
+                localStorage.getItem(
+                    oldStorageKey
+                )
+
+            ) || [];
+
+    } catch (
+    error
+    ) {
+
+        console.warn(
+            "OLD SAVED MIGRATION READ ERROR:",
+            error
+        );
+
+    }
+
+
+    if (
+        oldSavedPlaces.length >
+        0
+    ) {
+
+        await Promise.all(
+
+            oldSavedPlaces.map(
+                placeId =>
+
+                    setDoc(
+
+                        doc(
+                            db,
+                            "users",
+                            user.uid,
+                            "savedPlaces",
+                            placeId
+                        ),
+
+                        {
+                            destinationId:
+                                placeId,
+
+                            savedAt:
+                                serverTimestamp()
+                        },
+
+                        {
+                            merge:
+                                true
+                        }
+
+                    )
+
+            )
+
+        );
+
+    }
+
+
+    localStorage.removeItem(
+        oldStorageKey
     );
+
+
+    localStorage.setItem(
+        migrationKey,
+        "1"
+    );
+
+}
+
+
+/* =========================================================
+   START REALTIME SAVED PLACES LISTENER
+========================================================= */
+
+async function startRealtimeSavedPlacesListener(
+    user
+) {
+
+    /* =========================================
+       STOP PREVIOUS ACCOUNT LISTENER
+    ========================================= */
+
+    if (
+        savedPlacesUnsubscribe
+    ) {
+
+        savedPlacesUnsubscribe();
+
+        savedPlacesUnsubscribe =
+            null;
+
+    }
+
+
+    cloudSavedPlaceIds =
+        [];
+
+
+    savedPlacesLoaded =
+        false;
+
+
+    updateFavoriteButtons();
+
+    updateSavedCount();
+
+
+    if (
+        !user
+    ) {
+
+        if (
+            page?.classList.contains(
+                "saved-mode"
+            )
+        ) {
+
+            renderSavedPlaces();
+
+        }
+
+
+        return;
+
+    }
+
+
+    /* =========================================
+       MIGRATE OLD DEVICE DATA
+    ========================================= */
+
+    try {
+
+        await migrateOldSavedPlacesToFirestore(
+            user
+        );
+
+    } catch (
+    error
+    ) {
+
+        console.error(
+            "SAVED MIGRATION ERROR:",
+            error
+        );
+
+    }
+
+
+    /* =========================================
+       FIRESTORE REALTIME LISTENER
+    ========================================= */
+
+    const savedCollection =
+        collection(
+            db,
+            "users",
+            user.uid,
+            "savedPlaces"
+        );
+
+
+    savedPlacesUnsubscribe =
+        onSnapshot(
+
+            savedCollection,
+
+            snapshot => {
+
+                cloudSavedPlaceIds =
+                    snapshot.docs.map(
+                        documentSnapshot =>
+                            documentSnapshot.id
+                    );
+
+
+                savedPlacesLoaded =
+                    true;
+
+
+                console.log(
+                    "Realtime saved places:",
+                    cloudSavedPlaceIds
+                );
+
+
+                /* =================================
+                   UPDATE HEARTS
+                ================================= */
+
+                updateFavoriteButtons();
+
+
+                /* =================================
+                   UPDATE COUNT
+                ================================= */
+
+                updateSavedCount();
+
+
+                /* =================================
+                   UPDATE SAVED PAGE
+                ================================= */
+
+                if (
+                    page?.classList.contains(
+                        "saved-mode"
+                    )
+                ) {
+
+                    renderSavedPlaces();
+
+                }
+
+
+                /* =================================
+                   UPDATE MAP SAVED MARKERS
+                ================================= */
+
+                if (
+                    travelMap
+                ) {
+
+                    refreshTravelMapMarkers(
+                        false
+                    );
+
+                }
+
+            },
+
+            error => {
+
+                console.error(
+                    "SAVED PLACES LISTENER ERROR:",
+                    error
+                );
+
+            }
+
+        );
 
 }
 
 /* =========================================================
    UPDATE SAVED COUNT
-   REMOVE OLD / INVALID SAVED DESTINATIONS
 ========================================================= */
 
 function updateSavedCount() {
@@ -6009,14 +6183,14 @@ function updateSavedCount() {
 
 
     /* =====================================================
-       ONLY CLEAN AFTER FIRESTORE HAS FINISHED LOADING
+       ONLY COUNT CURRENTLY PUBLISHED DESTINATIONS
     ===================================================== */
 
     if (
         realtimeDestinationsLoaded
     ) {
 
-        const validDestinationIds =
+        const validIds =
             new Set(
 
                 realtimeDestinations.map(
@@ -6027,34 +6201,13 @@ function updateSavedCount() {
             );
 
 
-        const cleanedSavedPlaces =
+        savedPlaces =
             savedPlaces.filter(
                 placeId =>
-                    validDestinationIds.has(
+                    validIds.has(
                         placeId
                     )
             );
-
-
-        /* =============================================
-           OLD STATIC IDs FOUND
-           SAVE THE CLEAN VERSION
-        ============================================= */
-
-        if (
-            cleanedSavedPlaces.length !==
-            savedPlaces.length
-        ) {
-
-            saveSavedPlaces(
-                cleanedSavedPlaces
-            );
-
-        }
-
-
-        savedPlaces =
-            cleanedSavedPlaces;
 
     }
 
@@ -6062,10 +6215,6 @@ function updateSavedCount() {
     const total =
         savedPlaces.length;
 
-
-    /* =====================================================
-       SAVED PAGE HEADER
-    ===================================================== */
 
     if (
         savedCount
@@ -6076,10 +6225,6 @@ function updateSavedCount() {
 
     }
 
-
-    /* =====================================================
-       BOTTOM NAV BADGE
-    ===================================================== */
 
     if (
         savedNavCount
@@ -6146,10 +6291,10 @@ function updateFavoriteButtons() {
 }
 
 /* =========================================================
-   SAVE / UNSAVE DESTINATION
+   SAVE / UNSAVE DESTINATION — FIRESTORE
 ========================================================= */
 
-function toggleSavedPlace(
+async function toggleSavedPlace(
     card
 ) {
 
@@ -6161,10 +6306,6 @@ function toggleSavedPlace(
 
     }
 
-
-    /* =====================================================
-       USER MUST BE LOGGED IN
-    ===================================================== */
 
     const user =
         auth.currentUser;
@@ -6196,7 +6337,7 @@ function toggleSavedPlace(
     }
 
 
-    let savedPlaces =
+    const savedPlaces =
         getSavedPlaces();
 
 
@@ -6206,134 +6347,105 @@ function toggleSavedPlace(
         );
 
 
-    /* =====================================================
-       REMOVE
-    ===================================================== */
-
-    /* =====================================================
-   REMOVE SAVED DESTINATION
-===================================================== */
-
-    if (
-        isAlreadySaved
-    ) {
-
-        savedPlaces =
-            savedPlaces.filter(
-                id =>
-                    id !==
-                    placeId
-            );
-
-
-        /* =============================================
-           REMOVE ITS SAVED NOTIFICATION TOO
-        ============================================= */
-
-        removeSavedNotifications(
-            placeId
+    const destinationName =
+        card.dataset.name
+        ||
+        card.querySelector(
+            "h4"
         )
-            .catch(
-                error => {
-
-                    console.error(
-                        "REMOVE SAVED NOTIFICATION ERROR:",
-                        error
-                    );
-
-                }
-            );
-
-    }
+            ?.textContent
+            .trim()
+        ||
+        "Destination";
 
 
-    /* =====================================================
-       SAVE DESTINATION
-    ===================================================== */
-
-    else {
-
-        savedPlaces.push(
+    const savedDocument =
+        doc(
+            db,
+            "users",
+            user.uid,
+            "savedPlaces",
             placeId
         );
 
 
-        const destinationName =
-            card.dataset.name
-            ||
-            card.querySelector(
-                "h4"
-            )
-                ?.textContent
-                .trim()
-            ||
-            "Destination";
+    try {
 
+        /* =================================================
+           UNSAVE
+        ================================================= */
 
-        /* =============================================
-           CREATE ONE SAVED NOTIFICATION
-        ============================================= */
+        if (
+            isAlreadySaved
+        ) {
 
-        recordSavedNotification(
-
-            placeId,
-
-            destinationName
-
-        )
-            .catch(
-                error => {
-
-                    console.error(
-                        "SAVE NOTIFICATION ERROR:",
-                        error
-                    );
-
-                }
+            await deleteDoc(
+                savedDocument
             );
 
-    }
+
+            /*
+               Remove its corresponding saved notification
+               on every device too.
+            */
+
+            await removeSavedNotifications(
+                placeId
+            );
+
+        }
 
 
-    saveSavedPlaces(
-        savedPlaces
-    );
+        /* =================================================
+           SAVE
+        ================================================= */
+
+        else {
+
+            await setDoc(
+
+                savedDocument,
+
+                {
+                    destinationId:
+                        placeId,
+
+                    destinationName:
+                        destinationName,
+
+                    savedAt:
+                        serverTimestamp()
+                }
+
+            );
 
 
-    /* =====================================================
-       UPDATE UI
-    ===================================================== */
+            await recordSavedNotification(
 
-    updateFavoriteButtons();
+                placeId,
 
-    updateSavedCount();
+                destinationName
+
+            );
+
+        }
 
 
-    /* =====================================================
-       UPDATE SAVED PAGE IF OPEN
-    ===================================================== */
+        /*
+           DO NOT manually change cloudSavedPlaceIds here.
 
-    if (
-        page?.classList.contains(
-            "saved-mode"
-        )
+           Firestore onSnapshot() will receive the
+           change on every device.
+        */
+
+
+    } catch (
+    error
     ) {
 
-        renderSavedPlaces();
-
-    }
-
-
-    /* =====================================================
-       UPDATE SAVED MAP MARKERS
-    ===================================================== */
-
-    if (
-        travelMap
-    ) {
-
-        refreshTravelMapMarkers(
-            false
+        console.error(
+            "SAVE PLACE FIRESTORE ERROR:",
+            error
         );
 
     }
@@ -6442,10 +6554,6 @@ function renderSavedPlaces() {
                     )
             );
 
-
-        saveSavedPlaces(
-            savedPlaces
-        );
 
     }
 
@@ -7730,6 +7838,15 @@ async function submitComment() {
 
                 text:
                     text,
+
+
+                /* IMMEDIATE CLIENT TIMESTAMP */
+
+                clientCreatedAt:
+                    Date.now(),
+
+
+                /* AUTHORITATIVE FIRESTORE TIMESTAMP */
 
                 createdAt:
                     serverTimestamp()
