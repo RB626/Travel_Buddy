@@ -71,42 +71,7 @@ const streetMapButton = document.getElementById("streetMapButton");
 const satelliteMapButton = document.getElementById("satelliteMapButton");
 
 
-/* =========================================
-MAP DESTINATION COORDINATES
-========================================= */
 
-const MAP_COORDINATES = {
-
-    "sohoton-caves": {
-        lat: 11.365293,
-        lng: 125.164118
-    },
-
-    "marabut-marine-park": {
-        lat: 11.1076,
-        lng: 125.2125
-    },
-
-    "pinipisakan-falls": {
-        lat: 12.2597,
-        lng: 125.0514
-    },
-
-    "ulot-river": {
-        lat: 11.81405,
-        lng: 125.16095
-    },
-
-    "san-juanico-bridge": {
-        lat: 11.30278,
-        lng: 124.97194
-    }
-
-};
-
-/* =========================================
-   SAMAR MAP BOUNDS
-========================================= */
 
 /* =========================================
    SAMAR MAP BOUNDS
@@ -236,8 +201,8 @@ const seeAllButton =
 let activeDetailsPlaceId = null;
 let travelMap = null;
 let travelMapMarkers = [];
-let travelMapInfoWindow =
-    null;
+let travelMapInfoWindow = null;
+const travelMapMarkerById = new Map();
 
 /* =========================================
    ACTIVE FILTER
@@ -2762,7 +2727,16 @@ document
    GOOGLE MAPS MARKER ICON
 ========================================================= */
 
-function createTravelMapIcon() {
+/* =========================================================
+   GOOGLE MAPS MARKER ICON
+
+   TEAL = NORMAL
+   RED  = SAVED
+========================================================= */
+
+function createTravelMapIcon(
+    isSaved = false
+) {
 
     return {
 
@@ -2770,10 +2744,14 @@ function createTravelMapIcon() {
             google.maps.SymbolPath.CIRCLE,
 
         scale:
-            11,
+            isSaved
+                ? 13
+                : 11,
 
         fillColor:
-            "#00aeb3",
+            isSaved
+                ? "#e53935"
+                : "#00aeb3",
 
         fillOpacity:
             1,
@@ -2874,6 +2852,258 @@ function createMapPopup(
 
 }
 
+/* =========================================================
+   CLEAR GOOGLE MAP MARKERS
+========================================================= */
+
+function clearTravelMapMarkers() {
+
+    travelMapMarkers
+        .forEach(
+            marker => {
+
+                marker.setMap(
+                    null
+                );
+
+            }
+        );
+
+
+    travelMapMarkers =
+        [];
+
+
+    travelMapMarkerById
+        .clear();
+
+}
+
+
+/* =========================================================
+   REFRESH GOOGLE MAP MARKERS FROM FIRESTORE
+========================================================= */
+
+function refreshTravelMapMarkers(
+    fitMarkers = false
+) {
+
+    if (
+        !travelMap
+        ||
+        !window.google
+        ||
+        !window.google.maps
+    ) {
+
+        return;
+
+    }
+
+
+    clearTravelMapMarkers();
+
+
+    const savedPlaces =
+        getSavedPlaces();
+
+
+    const markerBounds =
+        new google.maps.LatLngBounds();
+
+
+    realtimeDestinations
+        .forEach(
+            destination => {
+
+                const latitude =
+                    Number(
+                        destination.lat
+                    );
+
+
+                const longitude =
+                    Number(
+                        destination.lng
+                    );
+
+
+                if (
+                    !Number.isFinite(
+                        latitude
+                    )
+                    ||
+                    !Number.isFinite(
+                        longitude
+                    )
+                ) {
+
+                    return;
+
+                }
+
+
+                const placeId =
+                    destination.id;
+
+
+                const isSaved =
+                    savedPlaces.includes(
+                        placeId
+                    );
+
+
+                const position = {
+
+                    lat:
+                        latitude,
+
+                    lng:
+                        longitude
+
+                };
+
+
+                /* =========================================
+                   CREATE MARKER
+                ========================================= */
+
+                const marker =
+                    new google.maps.Marker({
+
+                        position:
+                            position,
+
+                        map:
+                            travelMap,
+
+                        title:
+                            destination.name
+                            ||
+                            "",
+
+                        icon:
+                            createTravelMapIcon(
+                                isSaved
+                            )
+
+                    });
+
+
+                /* =========================================
+                   MARKER CLICK
+                ========================================= */
+
+                marker.addListener(
+                    "click",
+                    () => {
+
+                        const card =
+                            document.querySelector(
+                                `.featured-section .destination-card[data-id="${placeId}"]`
+                            );
+
+
+                        if (
+                            !card
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        travelMapInfoWindow
+                            ?.setContent(
+                                createMapPopup(
+                                    card
+                                )
+                            );
+
+
+                        travelMapInfoWindow
+                            ?.open({
+
+                                map:
+                                    travelMap,
+
+                                anchor:
+                                    marker
+
+                            });
+
+                    }
+                );
+
+
+                travelMapMarkers.push(
+                    marker
+                );
+
+
+                travelMapMarkerById.set(
+                    placeId,
+                    marker
+                );
+
+
+                markerBounds.extend(
+                    position
+                );
+
+            }
+        );
+
+
+    /* =====================================================
+       FIT MAP AROUND DESTINATIONS
+    ===================================================== */
+
+    if (
+        fitMarkers
+        &&
+        !markerBounds.isEmpty()
+    ) {
+
+        travelMap.fitBounds(
+            markerBounds,
+            45
+        );
+
+
+        google.maps.event
+            .addListenerOnce(
+                travelMap,
+                "idle",
+                () => {
+
+                    const zoom =
+                        travelMap.getZoom();
+
+
+                    if (
+                        zoom
+                        &&
+                        zoom > 10
+                    ) {
+
+                        travelMap.setZoom(
+                            10
+                        );
+
+                    }
+
+                }
+            );
+
+    }
+
+}
+
+
+/* =========================================================
+   INITIALIZE GOOGLE MAP
+========================================================= */
 
 /* =========================================================
    INITIALIZE GOOGLE MAP
@@ -2921,12 +3151,6 @@ async function initializeTravelMap() {
         travelMap
     ) {
 
-        /*
-           Google Maps automatically handles most
-           resizing, but recentering ensures the
-           hidden Map page renders correctly.
-        */
-
         const currentCenter =
             travelMap.getCenter();
 
@@ -2942,10 +3166,23 @@ async function initializeTravelMap() {
         }
 
 
+        /* =========================================
+           REFRESH FIRESTORE MARKERS
+        ========================================= */
+
+        refreshTravelMapMarkers(
+            false
+        );
+
+
         return;
 
     }
 
+
+    /* =========================================
+       GET MAP ELEMENT
+    ========================================= */
 
     const mapElement =
         document.getElementById(
@@ -2968,7 +3205,9 @@ async function initializeTravelMap() {
 
     travelMap =
         new google.maps.Map(
+
             mapElement,
+
             {
 
                 center: {
@@ -2990,11 +3229,6 @@ async function initializeTravelMap() {
                     8,
 
 
-                /*
-                   Allows users to zoom deeply
-                   into roads and streets.
-                */
-
                 maxZoom:
                     21,
 
@@ -3005,7 +3239,7 @@ async function initializeTravelMap() {
 
 
                 /* =================================
-                   GOOGLE STREET VIEW PEGMAN
+                   STREET VIEW PEGMAN
                 ================================= */
 
                 streetViewControl:
@@ -3034,11 +3268,6 @@ async function initializeTravelMap() {
                     true,
 
 
-                /*
-                   We already have our custom
-                   Street / Satellite buttons.
-                */
-
                 mapTypeControl:
                     false,
 
@@ -3066,6 +3295,7 @@ async function initializeTravelMap() {
                 }
 
             }
+
         );
 
 
@@ -3082,168 +3312,13 @@ async function initializeTravelMap() {
         });
 
 
-    /* =========================================
-       CLEAR OLD MARKERS
-    ========================================= */
+    /* =========================================================
+       LOAD REALTIME FIRESTORE DESTINATION MARKERS
+    ========================================================= */
 
-    travelMapMarkers =
-        [];
-
-
-    const markerBounds =
-        new google.maps.LatLngBounds();
-
-
-    /* =========================================
-       CREATE DESTINATION MARKERS
-    ========================================= */
-
-    destinationCards.forEach(
-        card => {
-
-            const placeId =
-                card.dataset.id;
-
-
-            const coordinates =
-                MAP_COORDINATES[
-                placeId
-                ];
-
-
-            if (
-                !coordinates
-            ) {
-
-                return;
-
-            }
-
-
-            const position = {
-
-                lat:
-                    coordinates.lat,
-
-                lng:
-                    coordinates.lng
-
-            };
-
-
-            /* =================================
-               GOOGLE MAP MARKER
-            ================================= */
-
-            const marker =
-                new google.maps.Marker({
-
-                    position:
-                        position,
-
-                    map:
-                        travelMap,
-
-                    title:
-                        card.dataset.name
-                        ||
-                        "",
-
-                    icon:
-                        createTravelMapIcon()
-
-                });
-
-
-            /* =================================
-               OPEN DESTINATION POPUP
-            ================================= */
-
-            marker.addListener(
-                "click",
-                () => {
-
-                    travelMapInfoWindow
-                        .setContent(
-                            createMapPopup(
-                                card
-                            )
-                        );
-
-
-                    travelMapInfoWindow
-                        .open({
-
-                            map:
-                                travelMap,
-
-                            anchor:
-                                marker
-
-                        });
-
-                }
-            );
-
-
-            travelMapMarkers.push(
-                marker
-            );
-
-
-            markerBounds.extend(
-                position
-            );
-
-        }
+    refreshTravelMapMarkers(
+        true
     );
-
-
-    /* =========================================
-       SHOW ALL DESTINATIONS
-    ========================================= */
-
-    if (
-        !markerBounds.isEmpty()
-    ) {
-
-        travelMap.fitBounds(
-            markerBounds,
-            45
-        );
-
-
-        /*
-           Prevent fitBounds from zooming
-           too close on initialization.
-        */
-
-        google.maps.event
-            .addListenerOnce(
-                travelMap,
-                "idle",
-                () => {
-
-                    const currentZoom =
-                        travelMap.getZoom();
-
-
-                    if (
-                        currentZoom
-                        &&
-                        currentZoom > 10
-                    ) {
-
-                        travelMap.setZoom(
-                            10
-                        );
-
-                    }
-
-                }
-            );
-
-    }
 
 }
 
@@ -4845,6 +4920,10 @@ mapShowAllButton?.addEventListener(
     }
 );
 
+/* =========================================================
+   MAP POPUP -> VIEW DETAILS
+========================================================= */
+
 document.addEventListener(
     "click",
     event => {
@@ -4855,9 +4934,18 @@ document.addEventListener(
             );
 
 
-        if (!mapDetailsButton) {
+        if (
+            !mapDetailsButton
+        ) {
+
             return;
+
         }
+
+
+        event.preventDefault();
+
+        event.stopPropagation();
 
 
         const placeId =
@@ -4865,19 +4953,50 @@ document.addEventListener(
                 .mapPlaceId;
 
 
+        if (
+            !placeId
+        ) {
+
+            return;
+
+        }
+
+
+        /* =====================================================
+           FIND THE REALTIME DESTINATION CARD
+        ===================================================== */
+
         const card =
             document.querySelector(
                 `.featured-section .destination-card[data-id="${placeId}"]`
             );
 
 
-        if (!card) {
+        if (
+            !card
+        ) {
+
+            console.warn(
+                "Destination card not found:",
+                placeId
+            );
+
             return;
+
         }
 
 
-        travelMap?.closePopup();
+        /* =====================================================
+           CLOSE GOOGLE MAP INFO WINDOW
+        ===================================================== */
 
+        travelMapInfoWindow
+            ?.close();
+
+
+        /* =====================================================
+           OPEN EXISTING VIEW DETAILS MODAL
+        ===================================================== */
 
         openDestinationDetails(
             card
