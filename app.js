@@ -3260,8 +3260,13 @@ function addAiChatMessage(
             "ai-message-avatar";
 
 
-        avatar.innerHTML =
-            `<i data-lucide="bot"></i>`;
+        avatar.innerHTML = `
+        <img
+        src="19.png"
+        alt="TravelBuddy AI"
+        class="ai-message-avatar-img"
+        >
+        `;
 
 
         messageElement.appendChild(
@@ -3326,18 +3331,26 @@ function showAiTyping() {
 
 
     typingMessage.innerHTML = `
-        <div class="ai-message-avatar">
-            <i data-lucide="bot"></i>
+    <div class="ai-message-avatar">
+
+        <img
+            src="19.png"
+            alt="TravelBuddy AI"
+            class="ai-message-avatar-img"
+        >
+
+    </div>
+
+    <div class="ai-message-bubble">
+
+        <div class="ai-typing">
+            <span></span>
+            <span></span>
+            <span></span>
         </div>
 
-        <div class="ai-message-bubble">
-            <div class="ai-typing">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-        </div>
-    `;
+    </div>
+`;
 
 
     aiChatMessages.appendChild(

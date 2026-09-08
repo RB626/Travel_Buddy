@@ -190,16 +190,36 @@ button {
 .brand-icon {
     width: 45px;
     height: 45px;
-    border-radius: 50%;
-    background: var(--teal);
-    display: grid;
-    place-items: center;
-    color: #fff
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    padding: 0;
+
+    /* REMOVE OLD CIRCLE */
+    background: transparent;
+    border-radius: 0;
 }
 
 .brand-icon svg {
     width: 23px;
     height: 23px
+}
+
+
+.brand-logo-img {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    /* SHOW THE ENTIRE LOGO */
+    object-fit: contain;
+
+    border-radius: 0;
 }
 
 .brand-copy h1 {
@@ -693,12 +713,14 @@ main {
 
     gap: 0;
 
-    overflow: hidden;
+    /* DON'T CUT THE CUSTOM IMAGE */
+    overflow: visible;
 
     border: 0;
-    border-radius: 50%;
 
-    background: var(--teal);
+    /* REMOVE OLD CIRCLE */
+    border-radius: 0;
+    background: transparent;
 
     color: #fff;
 
@@ -707,21 +729,28 @@ main {
 
     white-space: nowrap;
 
-    box-shadow:
-        0 8px 24px rgba(0, 110, 115, .20);
+    /* REMOVE CIRCLE SHADOW */
+    box-shadow: none;
 
     transition:
         width .25s ease,
         border-radius .25s ease,
         padding .25s ease,
-        gap .25s ease;
+        gap .25s ease,
+        background .25s ease;
 }
 
-.floating-ai svg {
-    width: 22px;
-    height: 22px;
+.floating-ai-image {
+    width: 56px;
+    height: 56px;
 
     flex-shrink: 0;
+
+    display: block;
+
+    object-fit: contain;
+
+    border-radius: 0;
 }
 
 .floating-ai span {
@@ -731,28 +760,57 @@ main {
 
     overflow: hidden;
 
+    white-space: nowrap;
+
+    flex-shrink: 0;
+
     transition:
         max-width .25s ease,
         opacity .2s ease;
 }
 
+/* =========================================================
+   DESKTOP AI BUTTON HOVER
+========================================================= */
+
 .floating-ai:hover {
-    width: 245px;
+    width: 290px;
 
-    padding:
-        0 22px;
+    padding: 0 20px;
 
-    gap: 10px;
+    gap: 12px;
 
     border-radius: 29px;
 
+    background: var(--teal);
+
     justify-content: flex-start;
+
+    box-shadow:
+        0 8px 24px rgba(0, 110, 115, .20);
 }
 
+
+.floating-ai:hover .floating-ai-image {
+    width: 42px;
+    height: 42px;
+
+    flex-shrink: 0;
+}
+
+
 .floating-ai:hover span {
-    max-width: 190px;
+    flex: 1;
+
+    max-width: none;
 
     opacity: 1;
+
+    overflow: visible;
+
+    white-space: nowrap;
+
+    text-overflow: unset;
 }
 
 .bottom-nav {
@@ -2293,16 +2351,6 @@ body.details-modal-open {
     }
 
 
-    .floating-ai svg,
-    .page.map-mode .floating-ai svg {
-
-        width: 18px;
-        height: 18px;
-
-        flex-shrink: 0;
-    }
-
-
     .floating-ai span,
     .page.map-mode .floating-ai span {
 
@@ -3456,6 +3504,47 @@ body.details-modal-open {
 
 }
 
+@media(max-width:360px) {
+
+    .floating-ai,
+    .page.map-mode .floating-ai {
+
+        right: 10px;
+
+        width:
+            calc(100vw - 20px);
+
+        height: 48px;
+
+        padding:
+            0 11px;
+
+        gap: 8px;
+
+        border-radius: 24px;
+    }
+
+
+    .floating-ai-image,
+    .page.map-mode .floating-ai-image,
+    .floating-ai:hover .floating-ai-image,
+    .page.map-mode .floating-ai:hover .floating-ai-image {
+
+        width: 35px;
+        height: 35px;
+
+        flex-basis: 35px;
+    }
+
+
+    .floating-ai span,
+    .page.map-mode .floating-ai span {
+
+        font-size: 12px;
+    }
+
+}
+
 @media(max-width:380px) {
 
     .bottom-nav .nav-item {
@@ -3614,19 +3703,27 @@ body.details-modal-open {
 
     flex-shrink: 0;
 
-    display: grid;
-    place-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    border-radius: 50%;
+    padding: 0;
 
-    background: var(--teal);
+    background: transparent;
+    border-radius: 0;
 
-    color: #fff;
+    overflow: visible;
 }
 
-.auth-brand-icon svg {
-    width: 23px;
-    height: 23px;
+.auth-brand-logo-img {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    object-fit: contain;
+
+    border-radius: 0;
 }
 
 .auth-brand h2 {
@@ -4068,7 +4165,10 @@ body.details-modal-open {
 
 @media(max-width:700px) {
 
-    /* NORMAL STATE - ICON ONLY */
+    /* =========================================================
+   MOBILE TRAVELBUDDY AI
+   DEFAULT = ICON ONLY
+========================================================= */
 
     .floating-ai,
     .page.map-mode .floating-ai {
@@ -4078,92 +4178,152 @@ body.details-modal-open {
         bottom:
             calc(82px + env(safe-area-inset-bottom));
 
-        width: 48px;
-        height: 48px;
+        width: 56px !important;
+        height: 56px !important;
 
-        padding: 0;
+        padding: 0 !important;
 
         display: flex;
+
         align-items: center;
         justify-content: center;
 
-        gap: 0;
+        gap: 0 !important;
+
+        border: 0;
+
+        border-radius: 0 !important;
+
+        background: transparent !important;
+
+        box-shadow: none !important;
 
         overflow: hidden;
 
-        border-radius: 50%;
-
-        font-size: 13px;
-
         white-space: nowrap;
-
-        transition:
-            width .25s ease,
-            padding .25s ease,
-            gap .25s ease,
-            border-radius .25s ease;
     }
 
 
-    .floating-ai svg,
-    .page.map-mode .floating-ai svg {
+    /* =========================================================
+   MOBILE AI IMAGE
+========================================================= */
 
-        width: 18px;
-        height: 18px;
+    .floating-ai-image,
+    .page.map-mode .floating-ai-image {
 
-        flex-shrink: 0;
+        width: 56px !important;
+        height: 56px !important;
+
+        flex:
+            0 0 56px;
+
+        display: block;
+
+        object-fit: contain;
     }
 
 
-    /* TEXT HIDDEN INITIALLY */
+    /* =========================================================
+   HIDE TEXT BY DEFAULT
+========================================================= */
 
     .floating-ai span,
     .page.map-mode .floating-ai span {
 
         display: block !important;
 
+        width: 0 !important;
         max-width: 0 !important;
 
         opacity: 0 !important;
 
-        overflow: hidden;
+        visibility: hidden;
+
+        overflow: hidden !important;
 
         white-space: nowrap;
 
+        margin: 0;
+
+        pointer-events: none;
+
         transition:
             max-width .25s ease,
-            opacity .2s ease;
+            opacity .2s ease,
+            visibility .2s ease;
     }
 
 
-    /* =========================================
-       HOVER - EXPAND BUTTON
-    ========================================= */
+    /* =========================================================
+   MOBILE HOVER / FOCUS
+========================================================= */
 
     .floating-ai:hover,
-    .page.map-mode .floating-ai:hover {
+    .page.map-mode .floating-ai:hover,
+    .floating-ai:focus-visible,
+    .page.map-mode .floating-ai:focus-visible {
 
-        width: 210px;
+        width:
+            min(285px,
+                calc(100vw - 28px)) !important;
+
+        height: 56px !important;
 
         padding:
-            0 17px;
+            0 14px !important;
 
-        gap: 8px;
-
-        border-radius: 24px;
+        gap: 8px !important;
 
         justify-content: flex-start;
+
+        border-radius: 28px !important;
+
+        background:
+            var(--teal) !important;
+
+        box-shadow:
+            0 8px 24px rgba(0, 110, 115, .20) !important;
     }
 
 
-    /* SHOW TEXT ON HOVER */
+    /* =========================================================
+   SMALLER IMAGE WHEN EXPANDED
+========================================================= */
+
+    .floating-ai:hover .floating-ai-image,
+    .page.map-mode .floating-ai:hover .floating-ai-image,
+    .floating-ai:focus-visible .floating-ai-image,
+    .page.map-mode .floating-ai:focus-visible .floating-ai-image {
+
+        width: 40px !important;
+        height: 40px !important;
+
+        flex-basis: 40px;
+    }
+
 
     .floating-ai:hover span,
-    .page.map-mode .floating-ai:hover span {
+    .page.map-mode .floating-ai:hover span,
+    .floating-ai:focus-visible span,
+    .page.map-mode .floating-ai:focus-visible span {
 
-        max-width: 160px !important;
+        width: auto !important;
+        max-width: none !important;
+
+        flex: 0 0 auto !important;
+
+        margin: 0 !important;
 
         opacity: 1 !important;
+        visibility: visible;
+
+        overflow: visible !important;
+
+        white-space: nowrap;
+
+        text-align: left;
+
+        line-height: 1;
     }
 
 }
@@ -4921,24 +5081,34 @@ body.details-modal-open {
 
 
 .ai-chat-logo {
-    width: 42px;
-    height: 42px;
+    width: 46px;
+    height: 46px;
 
-    display: grid;
-    place-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     flex-shrink: 0;
 
-    border-radius: 50%;
+    padding: 0;
 
-    background:
-        rgba(255, 255, 255, .18);
+    background: transparent;
+
+    border-radius: 0;
+
+    overflow: visible;
 }
 
 
-.ai-chat-logo svg {
-    width: 21px;
-    height: 21px;
+.ai-chat-logo-img {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    object-fit: contain;
+
+    border-radius: 0;
 }
 
 
@@ -5039,25 +5209,34 @@ body.details-modal-open {
 
 
 .ai-message-avatar {
-    width: 31px;
-    height: 31px;
+    width: 36px;
+    height: 36px;
 
-    flex: 0 0 31px;
+    flex: 0 0 36px;
 
-    display: grid;
-    place-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    border-radius: 50%;
+    padding: 0;
 
-    background: #cceff0;
+    background: transparent;
 
-    color: #008f92;
+    border-radius: 0;
+
+    overflow: visible;
 }
 
 
-.ai-message-avatar svg {
-    width: 16px;
-    height: 16px;
+.ai-message-avatar-img {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    object-fit: contain;
+
+    border-radius: 0;
 }
 
 
@@ -6434,6 +6613,437 @@ body.details-modal-open {
         word-break: normal;
 
         line-height: 1.45;
+    }
+
+}
+
+/* =========================================================
+   FINAL MOBILE TRAVELBUDDY AI FIX
+   KEEP THIS AT THE VERY BOTTOM OF styles.css
+========================================================= */
+
+@media (max-width: 700px) {
+
+    /* =========================================
+       DEFAULT = ICON ONLY
+    ========================================= */
+
+    .floating-ai,
+    .page.map-mode .floating-ai {
+
+        right: 14px !important;
+
+        bottom:
+            calc(82px + env(safe-area-inset-bottom)) !important;
+
+        width: 56px !important;
+        height: 56px !important;
+
+        min-width: 56px !important;
+        max-width: 56px !important;
+
+        padding: 0 !important;
+
+        gap: 0 !important;
+
+        display: flex !important;
+
+        align-items: center !important;
+        justify-content: center !important;
+
+        border: 0 !important;
+
+        border-radius: 0 !important;
+
+        background: transparent !important;
+
+        box-shadow: none !important;
+
+        overflow: hidden !important;
+    }
+
+
+    /* =========================================
+       ICON
+    ========================================= */
+
+    .floating-ai-image,
+    .page.map-mode .floating-ai-image {
+
+        width: 56px !important;
+        height: 56px !important;
+
+        flex:
+            0 0 56px !important;
+
+        object-fit: contain !important;
+    }
+
+
+    /* =========================================
+       TEXT HIDDEN BY DEFAULT
+    ========================================= */
+
+    .floating-ai span,
+    .page.map-mode .floating-ai span {
+
+        display: block !important;
+
+        width: 0 !important;
+        max-width: 0 !important;
+
+        margin: 0 !important;
+
+        opacity: 0 !important;
+
+        visibility: hidden !important;
+
+        overflow: hidden !important;
+
+        white-space: nowrap !important;
+
+        flex:
+            0 0 0 !important;
+    }
+
+
+    /* =========================================
+       EXPANDED STATE
+
+       IMPORTANT:
+       width: max-content removes the huge
+       empty area on the right.
+    ========================================= */
+
+    .floating-ai:hover,
+    .page.map-mode .floating-ai:hover,
+    .floating-ai:focus-visible,
+    .page.map-mode .floating-ai:focus-visible {
+
+        width: max-content !important;
+
+        min-width: 0 !important;
+
+        max-width:
+            calc(100vw - 28px) !important;
+
+        height: 56px !important;
+
+        padding:
+            0 15px 0 10px !important;
+
+        gap: 7px !important;
+
+        justify-content:
+            flex-start !important;
+
+        border-radius:
+            28px !important;
+
+        background:
+            var(--teal) !important;
+
+        box-shadow:
+            0 8px 24px rgba(0,
+                110,
+                115,
+                .20) !important;
+
+        overflow:
+            hidden !important;
+    }
+
+
+    /* =========================================
+       SMALLER ICON WHILE EXPANDED
+    ========================================= */
+
+    .floating-ai:hover .floating-ai-image,
+    .page.map-mode .floating-ai:hover .floating-ai-image,
+    .floating-ai:focus-visible .floating-ai-image,
+    .page.map-mode .floating-ai:focus-visible .floating-ai-image {
+
+        width: 40px !important;
+        height: 40px !important;
+
+        flex:
+            0 0 40px !important;
+    }
+
+
+    /* =========================================
+       TEXT WHILE EXPANDED
+    ========================================= */
+
+    .floating-ai:hover span,
+    .page.map-mode .floating-ai:hover span,
+    .floating-ai:focus-visible span,
+    .page.map-mode .floating-ai:focus-visible span {
+
+        width: auto !important;
+
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        opacity: 1 !important;
+
+        visibility:
+            visible !important;
+
+        overflow:
+            visible !important;
+
+        flex:
+            0 0 auto !important;
+
+        white-space:
+            nowrap !important;
+
+        font-size:
+            13px !important;
+
+        line-height:
+            1 !important;
+    }
+
+}
+
+/* =========================================================
+   FINAL TRAVELBUDDY AI BUTTON
+   DESKTOP + MOBILE
+   KEEP THIS AT VERY BOTTOM OF styles.css
+========================================================= */
+
+
+/* =========================================================
+   DEFAULT - ICON ONLY
+========================================================= */
+
+.floating-ai,
+.page.map-mode .floating-ai {
+
+    width: auto !important;
+
+    min-width: 56px !important;
+    max-width: calc(100vw - 28px) !important;
+
+    height: 56px !important;
+
+    padding: 0 !important;
+
+    display: inline-flex !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    gap: 0 !important;
+
+    border: 0 !important;
+
+    border-radius: 0 !important;
+
+    background: transparent !important;
+
+    box-shadow: none !important;
+
+    overflow: hidden !important;
+
+    white-space: nowrap !important;
+}
+
+
+/* =========================================================
+   AI IMAGE
+========================================================= */
+
+.floating-ai-image,
+.page.map-mode .floating-ai-image {
+
+    width: 56px !important;
+    height: 56px !important;
+
+    flex: 0 0 56px !important;
+
+    display: block !important;
+
+    object-fit: contain !important;
+
+    margin: 0 !important;
+}
+
+
+/* =========================================================
+   TEXT HIDDEN
+========================================================= */
+
+.floating-ai span,
+.page.map-mode .floating-ai span {
+
+    width: auto !important;
+
+    max-width: 0 !important;
+
+    margin: 0 !important;
+
+    opacity: 0 !important;
+
+    visibility: hidden !important;
+
+    overflow: hidden !important;
+
+    flex: 0 0 auto !important;
+
+    white-space: nowrap !important;
+
+    transition:
+        max-width .25s ease,
+        opacity .2s ease;
+}
+
+
+/* =========================================================
+   EXPANDED HOVER
+   WIDTH FITS CONTENT — NO EMPTY SPACE
+========================================================= */
+
+.floating-ai:hover,
+.page.map-mode .floating-ai:hover,
+.floating-ai:focus-visible,
+.page.map-mode .floating-ai:focus-visible {
+
+    width: auto !important;
+
+    min-width: 0 !important;
+
+    max-width: calc(100vw - 28px) !important;
+
+    height: 56px !important;
+
+    padding:
+        0 15px 0 10px !important;
+
+    gap: 8px !important;
+
+    justify-content: flex-start !important;
+
+    border-radius: 28px !important;
+
+    background: var(--teal) !important;
+
+    box-shadow:
+        0 8px 24px rgba(0, 110, 115, .20) !important;
+}
+
+
+/* =========================================================
+   SMALLER IMAGE WHEN EXPANDED
+========================================================= */
+
+.floating-ai:hover .floating-ai-image,
+.page.map-mode .floating-ai:hover .floating-ai-image,
+.floating-ai:focus-visible .floating-ai-image,
+.page.map-mode .floating-ai:focus-visible .floating-ai-image {
+
+    width: 40px !important;
+    height: 40px !important;
+
+    flex: 0 0 40px !important;
+}
+
+
+/* =========================================================
+   SHOW TEXT
+========================================================= */
+
+.floating-ai:hover span,
+.page.map-mode .floating-ai:hover span,
+.floating-ai:focus-visible span,
+.page.map-mode .floating-ai:focus-visible span {
+
+    width: auto !important;
+
+    max-width: 190px !important;
+
+    opacity: 1 !important;
+
+    visibility: visible !important;
+
+    overflow: visible !important;
+
+    flex: 0 0 auto !important;
+
+    margin: 0 !important;
+
+    white-space: nowrap !important;
+}
+
+@media (max-width: 700px) {
+
+    .floating-ai,
+    .page.map-mode .floating-ai {
+
+        right: 14px !important;
+
+        bottom:
+            calc(82px + env(safe-area-inset-bottom)) !important;
+
+        min-width: 52px !important;
+
+        height: 52px !important;
+    }
+
+
+    .floating-ai-image,
+    .page.map-mode .floating-ai-image {
+
+        width: 52px !important;
+        height: 52px !important;
+
+        flex: 0 0 52px !important;
+    }
+
+
+    .floating-ai:hover,
+    .page.map-mode .floating-ai:hover,
+    .floating-ai:focus-visible,
+    .page.map-mode .floating-ai:focus-visible {
+
+        width: auto !important;
+
+        min-width: 0 !important;
+
+        height: 52px !important;
+
+        padding:
+            0 13px 0 9px !important;
+
+        gap: 7px !important;
+
+        border-radius: 26px !important;
+    }
+
+
+    .floating-ai:hover .floating-ai-image,
+    .page.map-mode .floating-ai:hover .floating-ai-image,
+    .floating-ai:focus-visible .floating-ai-image,
+    .page.map-mode .floating-ai:focus-visible .floating-ai-image {
+
+        width: 38px !important;
+        height: 38px !important;
+
+        flex: 0 0 38px !important;
+    }
+
+
+    .floating-ai:hover span,
+    .page.map-mode .floating-ai:hover span,
+    .floating-ai:focus-visible span,
+    .page.map-mode .floating-ai:focus-visible span {
+
+        font-size: 13px !important;
+
+        max-width: 180px !important;
     }
 
 }
