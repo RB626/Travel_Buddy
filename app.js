@@ -1763,31 +1763,164 @@ travelerNotificationList
 
 
             /* =====================================================
-               COMMENT / NEW PLACE NOTIFICATION
-               OPEN DESTINATION DETAILS
-            ===================================================== */
+   NEW DESTINATION NOTIFICATION
+   HOME -> FEATURED DESTINATION -> HIGHLIGHT CARD
+===================================================== */
 
-            const card =
-                Array
-                    .from(
-                        document.querySelectorAll(
-                            ".featured-section .destination-card"
-                        )
-                    )
-                    .find(
-                        destinationCard =>
-                            destinationCard.dataset.id ===
-                            destinationId
-                    );
+            if (
+                notificationType ===
+                "new_place"
+            ) {
+
+                /* GO BACK TO HOME FIRST */
+
+                homeNavButton
+                    ?.click();
+
+
+                /* =========================================
+                   FIND + SCROLL TO THE EXACT NEW PLACE
+                ========================================= */
+
+                const focusNewDestination =
+                    () => {
+
+                        const destinationCard =
+                            Array
+                                .from(
+                                    document.querySelectorAll(
+                                        ".featured-section .destination-card"
+                                    )
+                                )
+                                .find(
+                                    card =>
+                                        card.dataset.id ===
+                                        destinationId
+                                );
+
+
+                        if (
+                            !destinationCard
+                        ) {
+
+                            return false;
+
+                        }
+
+
+                        /* REMOVE OLD HIGHLIGHT */
+
+                        document
+                            .querySelectorAll(
+                                ".destination-card.notification-highlight"
+                            )
+                            .forEach(
+                                card =>
+                                    card.classList.remove(
+                                        "notification-highlight"
+                                    )
+                            );
+
+
+                        /* HIGHLIGHT THIS CARD */
+
+                        destinationCard.classList.add(
+                            "notification-highlight"
+                        );
+
+
+                        /* SCROLL DIRECTLY TO FEATURED CARD */
+
+                        destinationCard.scrollIntoView({
+
+                            behavior:
+                                "smooth",
+
+                            block:
+                                "center",
+
+                            inline:
+                                "nearest"
+
+                        });
+
+
+                        /* REMOVE HIGHLIGHT AFTER A FEW SECONDS */
+
+                        setTimeout(
+                            () => {
+
+                                destinationCard.classList.remove(
+                                    "notification-highlight"
+                                );
+
+                            },
+                            3500
+                        );
+
+
+                        return true;
+
+                    };
+
+
+                setTimeout(
+                    () => {
+
+                        if (
+                            focusNewDestination()
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        setTimeout(
+                            focusNewDestination,
+                            300
+                        );
+
+                    },
+                    350
+                );
+
+
+                return;
+            }
 
 
             if (
-                card
+                notificationType ===
+                "comment"
             ) {
 
-                openDestinationDetails(
+                const card =
+                    Array
+                        .from(
+                            document.querySelectorAll(
+                                ".featured-section .destination-card"
+                            )
+                        )
+                        .find(
+                            destinationCard =>
+                                destinationCard.dataset.id ===
+                                destinationId
+                        );
+
+
+                if (
                     card
-                );
+                ) {
+
+                    openDestinationDetails(
+                        card
+                    );
+
+                }
+
+
+                return;
 
             }
 
@@ -4830,7 +4963,7 @@ function createTravelMapIcon(
 
         fillColor:
             isSaved
-                ? "#e53935"
+                ? "#00aeb3"
                 : "#00aeb3",
 
         fillOpacity:
@@ -4961,7 +5094,8 @@ function clearTravelMapMarkers() {
 
 
 /* =========================================================
-   REFRESH GOOGLE MAP MARKERS FROM FIRESTORE
+   REFRESH GOOGLE MAP
+   SHOW ONLY CURRENT USER'S SAVED PLACES
 ========================================================= */
 
 function refreshTravelMapMarkers(
@@ -4981,18 +5115,65 @@ function refreshTravelMapMarkers(
     }
 
 
+    /* =========================================
+       REMOVE OLD MARKERS
+    ========================================= */
+
     clearTravelMapMarkers();
 
 
+    /* CLOSE OLD POPUP */
+
+    travelMapInfoWindow
+        ?.close();
+
+
+    /* =========================================
+       CURRENT USER'S SAVED DESTINATIONS
+    ========================================= */
+
     const savedPlaces =
         getSavedPlaces();
+
+
+    const savedPlaceIds =
+        new Set(
+            savedPlaces
+        );
 
 
     const markerBounds =
         new google.maps.LatLngBounds();
 
 
+    /* =========================================
+       NO SAVED PLACES
+    ========================================= */
+
+    if (
+        savedPlaceIds.size ===
+        0
+    ) {
+
+        return;
+
+    }
+
+
+    /* =========================================
+       ONLY LOOP THROUGH SAVED DESTINATIONS
+    ========================================= */
+
     realtimeDestinations
+
+        .filter(
+            destination =>
+
+                savedPlaceIds.has(
+                    destination.id
+                )
+        )
+
         .forEach(
             destination => {
 
@@ -5027,12 +5208,6 @@ function refreshTravelMapMarkers(
                     destination.id;
 
 
-                const isSaved =
-                    savedPlaces.includes(
-                        placeId
-                    );
-
-
                 const position = {
 
                     lat:
@@ -5045,7 +5220,7 @@ function refreshTravelMapMarkers(
 
 
                 /* =========================================
-                   CREATE MARKER
+                   CREATE SAVED-PLACE MARKER
                 ========================================= */
 
                 const marker =
@@ -5062,9 +5237,13 @@ function refreshTravelMapMarkers(
                             ||
                             "",
 
+                        /*
+                           TRUE = SAVED MARKER STYLE
+                        */
+
                         icon:
                             createTravelMapIcon(
-                                isSaved
+                                true
                             )
 
                     });
@@ -5116,6 +5295,10 @@ function refreshTravelMapMarkers(
                 );
 
 
+                /* =========================================
+                   STORE MARKER
+                ========================================= */
+
                 travelMapMarkers.push(
                     marker
                 );
@@ -5135,9 +5318,9 @@ function refreshTravelMapMarkers(
         );
 
 
-    /* =====================================================
-       FIT MAP AROUND DESTINATIONS
-    ===================================================== */
+    /* =========================================
+       FIT MAP AROUND SAVED PLACES
+    ========================================= */
 
     if (
         fitMarkers
