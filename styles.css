@@ -7178,3 +7178,120 @@ body.details-modal-open {
     }
 
 }
+
+/* =========================================================
+   EXIT GOOGLE STREET VIEW
+========================================================= */
+
+.street-view-exit-btn {
+
+    position: absolute;
+
+    z-index: 600;
+
+    top: 16px;
+    left: 16px;
+
+    min-height: 42px;
+
+    padding:
+        0 15px;
+
+    border:
+        1px solid rgba(207, 225, 234, .9);
+
+    border-radius: 22px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+
+    background:
+        rgba(255, 255, 255, .96);
+
+    color:
+        var(--text);
+
+    font-size: 12px;
+    font-weight: 900;
+
+    box-shadow:
+        0 4px 16px rgba(20, 50, 65, .16);
+
+    backdrop-filter:
+        blur(8px);
+
+    -webkit-backdrop-filter:
+        blur(8px);
+}
+
+
+.street-view-exit-btn[hidden] {
+
+    display:
+        none !important;
+}
+
+
+.street-view-exit-btn svg {
+
+    width: 17px;
+    height: 17px;
+
+    color:
+        var(--teal);
+}
+
+
+.street-view-exit-btn:hover {
+
+    background:
+        var(--teal-soft);
+
+    border-color:
+        rgba(7, 159, 163, .25);
+}
+
+
+/* HIDE STREET/SATELLITE SWITCH
+   WHILE PEGMAN VIEW IS ACTIVE */
+
+.map-style-switch.street-view-active {
+
+    display:
+        none !important;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width:700px) {
+
+    .street-view-exit-btn {
+
+        top: 10px;
+        left: 10px;
+
+        min-height: 38px;
+
+        padding:
+            0 12px;
+
+        gap: 6px;
+
+        border-radius: 20px;
+
+        font-size: 11px;
+    }
+
+
+    .street-view-exit-btn svg {
+
+        width: 15px;
+        height: 15px;
+    }
+
+}

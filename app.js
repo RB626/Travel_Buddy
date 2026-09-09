@@ -64,8 +64,7 @@ const mapSection = document.getElementById("mapSection");
 const mapShowAllButton = document.getElementById("mapShowAllButton");
 const streetMapButton = document.getElementById("streetMapButton");
 const satelliteMapButton = document.getElementById("satelliteMapButton");
-
-
+const streetViewExitButton = document.getElementById("streetViewExitButton");
 
 
 /* =========================================
@@ -5848,6 +5847,54 @@ async function initializeTravelMap() {
 
         );
 
+    /* =========================================================
+GOOGLE STREET VIEW / PEGMAN
+========================================================= */
+
+    const streetViewPanorama =
+        travelMap.getStreetView();
+
+
+    /* =========================================
+       SHOW / HIDE EXIT BUTTON
+    ========================================= */
+
+    streetViewPanorama.addListener(
+        "visible_changed",
+        () => {
+
+            const streetViewIsOpen =
+                streetViewPanorama
+                    .getVisible();
+
+
+            if (
+                streetViewExitButton
+            ) {
+
+                streetViewExitButton.hidden =
+                    !streetViewIsOpen;
+
+            }
+
+
+            /*
+               Hide our normal map switch while
+               Google Street View is active.
+            */
+
+            document
+                .querySelector(
+                    ".map-style-switch"
+                )
+                ?.classList.toggle(
+                    "street-view-active",
+                    streetViewIsOpen
+                );
+
+        }
+    );
+
 
     /* =========================================
        SHARED INFO WINDOW
@@ -5954,6 +6001,124 @@ mapNavButton?.addEventListener(
 
     }
 );
+
+/* =========================================================
+   EXIT GOOGLE STREET VIEW
+========================================================= */
+
+function exitTravelStreetView() {
+
+    if (
+        !travelMap
+    ) {
+
+        return;
+
+    }
+
+
+    const streetViewPanorama =
+        travelMap.getStreetView();
+
+
+    if (
+        !streetViewPanorama
+            .getVisible()
+    ) {
+
+        return;
+
+    }
+
+
+    /* CLOSE PEGMAN / STREET VIEW */
+
+    streetViewPanorama
+        .setVisible(
+            false
+        );
+
+
+    /* CLOSE ANY STREET VIEW UI STATE */
+
+    if (
+        streetViewExitButton
+    ) {
+
+        streetViewExitButton.hidden =
+            true;
+
+    }
+
+
+    /*
+       Refresh normal map after Google
+       switches back from panorama.
+    */
+
+    setTimeout(
+        () => {
+
+            google.maps.event.trigger(
+                travelMap,
+                "resize"
+            );
+
+
+            updateTravelerLocationMarker();
+
+            refreshTravelMapMarkers(
+                false
+            );
+
+        },
+        100
+    );
+
+}
+
+
+/* BUTTON CLICK */
+
+streetViewExitButton
+    ?.addEventListener(
+        "click",
+        exitTravelStreetView
+    );
+
+
+/* ESC KEY ALSO EXITS STREET VIEW */
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key !==
+            "Escape"
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            travelMap
+            &&
+            travelMap
+                .getStreetView()
+                .getVisible()
+        ) {
+
+            exitTravelStreetView();
+
+        }
+
+    }
+);
+
+
 
 /* =========================================================
    GOOGLE STREET / ROAD MAP
