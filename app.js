@@ -198,6 +198,7 @@ let travelMap = null;
 let travelMapMarkers = [];
 let travelMapInfoWindow = null;
 const travelMapMarkerById = new Map();
+let travelerLocationMarker = null;
 
 /* =========================================
    ACTIVE FILTER
@@ -1991,6 +1992,279 @@ let currentTravelerLocation =
 let travelerLocationWatchId =
     null;
 
+/* =========================================================
+USER'S LIVE LOCATION MARKER
+WHITE DOT = CURRENT TRAVELER
+========================================================= */
+
+function updateTravelerLocationMarker() {
+
+    /* =========================================
+       MAP MUST EXIST FIRST
+    ========================================= */
+
+    if (
+        !travelMap
+        ||
+        !window.google
+        ||
+        !window.google.maps
+    ) {
+
+        return;
+
+    }
+
+
+    /* =========================================
+       NO GPS LOCATION
+       HIDE USER MARKER
+    ========================================= */
+
+    if (
+        !currentTravelerLocation
+    ) {
+
+        if (
+            travelerLocationMarker
+        ) {
+
+            travelerLocationMarker
+                .setMap(
+                    null
+                );
+
+        }
+
+
+        return;
+
+    }
+
+
+    const latitude =
+        Number(
+            currentTravelerLocation.lat
+        );
+
+
+    const longitude =
+        Number(
+            currentTravelerLocation.lng
+        );
+
+
+    if (
+        !Number.isFinite(
+            latitude
+        )
+        ||
+        !Number.isFinite(
+            longitude
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    const position = {
+
+        lat:
+            latitude,
+
+        lng:
+            longitude
+
+    };
+
+
+    /* =========================================
+       CREATE USER MARKER ONCE
+    ========================================= */
+
+    if (
+        !travelerLocationMarker
+    ) {
+
+        travelerLocationMarker =
+            new google.maps.Marker({
+
+                map:
+                    travelMap,
+
+                position:
+                    position,
+
+                title:
+                    "Your current location",
+
+                /* IMPORTANT: ALLOW CLICK */
+
+                clickable:
+                    true,
+
+                zIndex:
+                    9999,
+
+                icon: {
+
+                    path:
+                        google.maps
+                            .SymbolPath
+                            .CIRCLE,
+
+                    /* WHITE CENTER */
+
+                    fillColor:
+                        "#ffffff",
+
+                    fillOpacity:
+                        1,
+
+                    /* TEAL OUTLINE */
+
+                    strokeColor:
+                        "#079fa3",
+
+                    strokeOpacity:
+                        1,
+
+                    strokeWeight:
+                        4,
+
+                    scale:
+                        8
+
+                }
+
+            });
+
+
+        /* =========================================
+           CLICK WHITE DOT
+        ========================================= */
+
+        travelerLocationMarker
+            .addListener(
+                "click",
+                () => {
+
+                    const markerPosition =
+                        travelerLocationMarker
+                            .getPosition();
+
+
+                    if (
+                        !markerPosition
+                    ) {
+
+                        return;
+
+                    }
+
+                    travelMapInfoWindow
+                        ?.setOptions({
+                            disableAutoPan:
+                                true
+                        });
+
+
+                    travelMapInfoWindow
+                        ?.setContent(`
+                            <div
+                                style="
+                                    padding:6px 5px;
+                                    min-width:170px;
+                                    font-family:'Nunito Sans', Arial, sans-serif;
+                                "
+                            >
+
+                                <div
+                                    style="
+                                        display:flex;
+                                        align-items:center;
+                                        gap:8px;
+                                        margin-bottom:4px;
+                                    "
+                                >
+
+                                    <span
+                                        style="
+                                            width:12px;
+                                            height:12px;
+                                            border-radius:50%;
+                                            background:#ffffff;
+                                            border:3px solid #079fa3;
+                                            display:inline-block;
+                                            flex-shrink:0;
+                                        "
+                                    ></span>
+
+                                    <strong
+                                        style="
+                                            color:#061d31;
+                                            font-size:14px;
+                                        "
+                                    >
+                                        Your current location
+                                    </strong>
+
+                                </div>
+
+                                <div
+                                    style="
+                                        color:#587087;
+                                        font-size:12px;
+                                        padding-left:20px;
+                                    "
+                                >
+                                    Live GPS position
+                                </div>
+
+                            </div>
+                        `);
+
+
+                    travelMapInfoWindow
+                        ?.open({
+
+                            map:
+                                travelMap,
+
+                            anchor:
+                                travelerLocationMarker
+
+                        });
+
+                }
+            );
+
+
+        return;
+
+    }
+
+
+    /* =========================================
+       MOVE EXISTING DOT
+       EVERY GPS UPDATE
+    ========================================= */
+
+    travelerLocationMarker
+        .setMap(
+            travelMap
+        );
+
+
+    travelerLocationMarker
+        .setPosition(
+            position
+        );
+
+}
+
 
 /* =========================================================
    CALCULATE DISTANCE BETWEEN TWO GPS POINTS
@@ -2379,6 +2653,7 @@ function startLiveLocationTracking() {
                     ================================= */
 
                     updateLiveDistanceLabels();
+                    updateTravelerLocationMarker();
 
                 },
 
@@ -2431,11 +2706,22 @@ function startLiveLocationTracking() {
                     }
 
 
-                    currentTravelerLocation =
-                        null;
+                    if (
+                        error.code ===
+                        error.PERMISSION_DENIED
+                    ) {
+
+                        currentTravelerLocation =
+                            null;
+
+                    }
 
 
                     updateLiveDistanceLabels();
+
+
+
+                    updateTravelerLocationMarker();
 
                 },
 
@@ -5437,6 +5723,7 @@ async function initializeTravelMap() {
             false
         );
 
+        updateTravelerLocationMarker();
 
         return;
 
@@ -5582,6 +5869,8 @@ async function initializeTravelMap() {
     refreshTravelMapMarkers(
         true
     );
+
+    updateTravelerLocationMarker();
 
 }
 
@@ -8620,12 +8909,16 @@ async function recordDestinationUniqueView(
 }
 
 /* =========================================================
-   SHOW ALL GOOGLE MAP MARKERS
+   LOCATE CURRENT TRAVELER
 ========================================================= */
 
 mapShowAllButton?.addEventListener(
     "click",
     () => {
+
+        /* =========================================
+           MAP MUST EXIST
+        ========================================= */
 
         if (
             !travelMap
@@ -8636,39 +8929,158 @@ mapShowAllButton?.addEventListener(
         }
 
 
-        const bounds =
-            new google.maps.LatLngBounds();
+        /* =========================================
+           FOCUS MAP ON CURRENT LOCATION
+        ========================================= */
 
+        const focusOnTraveler =
+            () => {
 
-        travelMapMarkers
-            .forEach(
-                marker => {
+                if (
+                    !currentTravelerLocation
+                ) {
 
-                    const position =
-                        marker.getPosition();
-
-
-                    if (
-                        position
-                    ) {
-
-                        bounds.extend(
-                            position
-                        );
-
-                    }
+                    return false;
 
                 }
-            );
 
+
+                const latitude =
+                    Number(
+                        currentTravelerLocation.lat
+                    );
+
+
+                const longitude =
+                    Number(
+                        currentTravelerLocation.lng
+                    );
+
+
+                if (
+                    !Number.isFinite(
+                        latitude
+                    )
+                    ||
+                    !Number.isFinite(
+                        longitude
+                    )
+                ) {
+
+                    return false;
+
+                }
+
+
+                const position = {
+
+                    lat:
+                        latitude,
+
+                    lng:
+                        longitude
+
+                };
+
+
+                /* MAKE SURE WHITE DOT EXISTS */
+
+                updateTravelerLocationMarker();
+
+
+                /* SMOOTHLY CENTER MAP */
+
+                /* =========================================================
+   INSTANTLY CENTER USER
+========================================================= */
+
+                travelMap.setZoom(
+                    16
+                );
+
+
+                travelMap.setCenter(
+                    position
+                );
+
+
+                /* =========================================================
+                   OPEN POPUP AFTER MAP IS CENTERED
+                ========================================================= */
+
+                google.maps.event
+                    .addListenerOnce(
+                        travelMap,
+                        "idle",
+                        () => {
+
+                            if (
+                                travelerLocationMarker
+                            ) {
+
+                                google.maps.event
+                                    .trigger(
+                                        travelerLocationMarker,
+                                        "click"
+                                    );
+
+
+                                /*
+                                   InfoWindow may slightly move the map
+                                   on larger screens.
+                
+                                   Force the traveler back to the center.
+                                */
+
+                                setTimeout(
+                                    () => {
+
+                                        travelMap.setCenter(
+                                            position
+                                        );
+
+                                    },
+                                    60
+                                );
+
+                            }
+
+                        }
+                    );
+
+
+                return true;
+
+            };
+
+
+        /* =========================================
+           ALREADY HAVE LIVE GPS
+        ========================================= */
 
         if (
-            bounds.isEmpty()
+            focusOnTraveler()
         ) {
 
-            travelMap.fitBounds(
-                SAMAR_BOUNDS,
-                20
+            return;
+
+        }
+
+
+        /* =========================================
+           NO GPS YET
+           REQUEST LOCATION
+        ========================================= */
+
+        if (
+            !(
+                "geolocation"
+                in navigator
+            )
+        ) {
+
+            alert(
+                "Location is not supported by this browser."
             );
 
 
@@ -8677,35 +9089,107 @@ mapShowAllButton?.addEventListener(
         }
 
 
-        travelMap.fitBounds(
-            bounds,
-            45
-        );
+        navigator.geolocation
+            .getCurrentPosition(
+
+                position => {
+
+                    const latitude =
+                        Number(
+                            position.coords
+                                .latitude
+                        );
 
 
-        google.maps.event
-            .addListenerOnce(
-                travelMap,
-                "idle",
-                () => {
-
-                    const zoom =
-                        travelMap.getZoom();
+                    const longitude =
+                        Number(
+                            position.coords
+                                .longitude
+                        );
 
 
                     if (
-                        zoom
-                        &&
-                        zoom > 10
+                        !Number.isFinite(
+                            latitude
+                        )
+                        ||
+                        !Number.isFinite(
+                            longitude
+                        )
                     ) {
 
-                        travelMap.setZoom(
-                            10
+                        return;
+
+                    }
+
+
+                    currentTravelerLocation = {
+
+                        lat:
+                            latitude,
+
+                        lng:
+                            longitude,
+
+                        accuracy:
+                            position.coords
+                                .accuracy
+
+                    };
+
+
+                    /* UPDATE DISTANCES */
+
+                    updateLiveDistanceLabels();
+
+
+                    /* CREATE / MOVE WHITE DOT */
+
+                    updateTravelerLocationMarker();
+
+
+                    /* CENTER MAP */
+
+                    focusOnTraveler();
+
+                },
+
+
+                error => {
+
+                    if (
+                        error.code ===
+                        error.PERMISSION_DENIED
+                    ) {
+
+                        alert(
+                            "Please allow location access to use Locate Me."
                         );
 
                     }
 
+                    else {
+
+                        alert(
+                            "Your current location could not be found. Please try again."
+                        );
+
+                    }
+
+                },
+
+
+                {
+                    enableHighAccuracy:
+                        true,
+
+                    timeout:
+                        15000,
+
+                    maximumAge:
+                        5000
                 }
+
             );
 
     }
