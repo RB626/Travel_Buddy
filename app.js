@@ -199,6 +199,136 @@ let travelMapInfoWindow = null;
 const travelMapMarkerById = new Map();
 let travelerLocationMarker = null;
 
+/* =========================================================
+   LAZY LOAD GOOGLE MAPS
+   MAPS DOWNLOADS ONLY WHEN USER OPENS MAP
+========================================================= */
+
+let googleMapsLoadPromise =
+    null;
+
+
+/*
+   Put the SAME Google Maps API key
+   that you currently use in index.html.
+*/
+
+const GOOGLE_MAPS_API_KEY =
+    "AIzaSyBGVzALyE9e1j1TxSU6ai0PrtKwmk_Xqm0";
+
+
+function loadGoogleMaps() {
+
+    /* =========================================
+       ALREADY LOADED
+    ========================================= */
+
+    if (
+        window.google
+        &&
+        window.google.maps
+    ) {
+
+        return Promise.resolve();
+
+    }
+
+
+    /* =========================================
+       ALREADY LOADING
+       PREVENT DUPLICATE SCRIPT REQUESTS
+    ========================================= */
+
+    if (
+        googleMapsLoadPromise
+    ) {
+
+        return googleMapsLoadPromise;
+
+    }
+
+
+    googleMapsLoadPromise =
+        new Promise(
+            (
+                resolve,
+                reject
+            ) => {
+
+                /* =================================
+                   GOOGLE CALLBACK
+                ================================= */
+
+                window.initTravelBuddyGoogleMaps =
+                    () => {
+
+                        resolve();
+
+                    };
+
+
+                /* =================================
+                   CREATE GOOGLE MAP SCRIPT
+                ================================= */
+
+                const script =
+                    document.createElement(
+                        "script"
+                    );
+
+
+                script.src =
+                    `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
+                        GOOGLE_MAPS_API_KEY
+                    )}&loading=async&callback=initTravelBuddyGoogleMaps&v=weekly`;
+
+
+                script.async =
+                    true;
+
+
+                script.defer =
+                    true;
+
+
+                script.dataset
+                    .travelBuddyGoogleMaps =
+                    "true";
+
+
+                /* =================================
+                   ERROR HANDLING
+                ================================= */
+
+                script.onerror =
+                    () => {
+
+                        googleMapsLoadPromise =
+                            null;
+
+
+                        reject(
+                            new Error(
+                                "Google Maps failed to load."
+                            )
+                        );
+
+                    };
+
+
+                document.head
+                    .appendChild(
+                        script
+                    );
+
+            }
+        );
+
+
+    return googleMapsLoadPromise;
+
+}
+
 /* =========================================
    ACTIVE FILTER
 ========================================= */
@@ -3266,9 +3396,46 @@ function startRealtimeDestinationListener() {
    START REALTIME DESTINATIONS
 ========================================================= */
 
+/* LOAD DESTINATIONS IMMEDIATELY */
+
 startRealtimeDestinationListener();
 
-startLiveLocationTracking();
+
+/* =========================================================
+   START GPS AFTER INITIAL PAGE WORK
+========================================================= */
+
+if (
+    "requestIdleCallback"
+    in window
+) {
+
+    requestIdleCallback(
+        () => {
+
+            startLiveLocationTracking();
+
+        },
+        {
+            timeout:
+                1800
+        }
+    );
+
+}
+
+else {
+
+    setTimeout(
+        () => {
+
+            startLiveLocationTracking();
+
+        },
+        900
+    );
+
+}
 
 /* =========================================================
    FIREBASE AUTHENTICATION
@@ -5653,21 +5820,75 @@ function refreshTravelMapMarkers(
    INITIALIZE GOOGLE MAP
 ========================================================= */
 
-/* =========================================================
-   INITIALIZE GOOGLE MAP
-========================================================= */
-
 async function initializeTravelMap() {
 
-    /* =========================================
-       WAIT FOR GOOGLE MAPS API
-    ========================================= */
+    /* =====================================================
+       LOAD GOOGLE MAPS ONLY WHEN MAP IS ACTUALLY NEEDED
+    ===================================================== */
 
-    if (
-        window.googleMapsReady
+    try {
+
+        const mapElement =
+            document.getElementById(
+                "travelMap"
+            );
+
+
+        /*
+           Show lightweight loading feedback
+           while Google Maps downloads the first time.
+        */
+
+        if (
+            mapElement
+            &&
+            !travelMap
+        ) {
+
+            mapElement.innerHTML = `
+                <div class="map-loading-state">
+                    <div class="map-loading-spinner"></div>
+                    <span>Loading map...</span>
+                </div>
+            `;
+
+        }
+
+
+        await loadGoogleMaps();
+
+    }
+
+    catch (
+    error
     ) {
 
-        await window.googleMapsReady;
+        console.error(
+            "Google Maps JavaScript API failed to load:",
+            error
+        );
+
+
+        const mapElement =
+            document.getElementById(
+                "travelMap"
+            );
+
+
+        if (
+            mapElement
+        ) {
+
+            mapElement.innerHTML = `
+                <div class="map-loading-error">
+                    Unable to load the map.
+                </div>
+            `;
+
+        }
+
+
+        return;
 
     }
 
